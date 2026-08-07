@@ -34,7 +34,11 @@ export const useKeyboardShortcuts = (
       }
 
       shortcuts.forEach((shortcut) => {
-        const ctrlMatch = shortcut.ctrl ? event.ctrlKey || event.metaKey : true;
+        // An unspecified modifier means "must NOT be held". Treating it as
+        // "don't care" made plain Delete fire on Ctrl+Delete too, wiping the
+        // whole queue by accident.
+        const modifierHeld = event.ctrlKey || event.metaKey;
+        const ctrlMatch = shortcut.ctrl ? modifierHeld : !modifierHeld;
         const shiftMatch = shortcut.shift ? event.shiftKey : !event.shiftKey;
         const altMatch = shortcut.alt ? event.altKey : !event.altKey;
         const keyMatch = event.key.toLowerCase() === shortcut.key.toLowerCase();

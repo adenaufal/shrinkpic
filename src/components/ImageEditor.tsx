@@ -10,6 +10,7 @@ import {
   FlipHorizontal,
   FlipVertical,
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 interface ImageEditorProps {
   file: File;
@@ -116,17 +117,28 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ file, onSave, onCancel
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    canvas.toBlob((blob) => {
-      if (!blob) return;
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          toast.error('Could not save the edit — the image may be too large for this device.');
+          return;
+        }
 
-      const extension = file.name.split('.').pop() || 'jpg';
-      const editedFile = new File([blob], file.name, {
-        type: blob.type,
-        lastModified: Date.now(),
-      });
+        // Name the file after the bytes we actually produced: `toBlob` silently
+        // falls back to PNG when it cannot encode the requested type.
+        const base = file.name.replace(/\.[^/.]+$/, '') || 'image';
+        const extension = blob.type === 'image/png' ? 'png' : blob.type === 'image/webp' ? 'webp' : 'jpg';
 
-      onSave(editedFile);
-    }, file.type || 'image/jpeg', 0.95);
+        onSave(
+          new File([blob], `${base}.${extension}`, {
+            type: blob.type,
+            lastModified: Date.now(),
+          })
+        );
+      },
+      file.type || 'image/jpeg',
+      0.95
+    );
   };
 
   return (

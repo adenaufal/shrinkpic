@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { safeStorage } from '../utils/safeStorage';
 
 type Theme = 'light' | 'dark';
 
@@ -11,15 +12,19 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setTheme] = useState<Theme>(() => {
-    // Check localStorage first
-    const savedTheme = localStorage.getItem('theme') as Theme | null;
-    if (savedTheme) {
+    // Storage access can throw (private browsing, embedded WebViews), and a
+    // throw here would blank the app before it ever painted.
+    const savedTheme = safeStorage.getItem('theme');
+    if (savedTheme === 'light' || savedTheme === 'dark') {
       return savedTheme;
     }
 
-    // Check system preference
-    if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      return 'dark';
+    try {
+      if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        return 'dark';
+      }
+    } catch {
+      // matchMedia is missing in some very old WebViews.
     }
 
     return 'light';
@@ -34,7 +39,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       root.classList.remove('dark');
     }
 
-    localStorage.setItem('theme', theme);
+    safeStorage.setItem('theme', theme);
   }, [theme]);
 
   const toggleTheme = () => {

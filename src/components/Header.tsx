@@ -1,10 +1,17 @@
 import React from 'react';
-import { Zap, Github, Heart, Menu, Moon, Sun } from 'lucide-react';
+import { Zap, Github, Heart, Menu, Moon, Sun, History } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from './ui/sheet';
 import { useTheme } from '../contexts/ThemeContext';
 
-export const Header: React.FC = () => {
+interface HeaderProps {
+  historyCount: number;
+  onOpenHistory: () => void;
+}
+
+export const Header: React.FC<HeaderProps> = ({ historyCount, onOpenHistory }) => {
   const { theme, toggleTheme } = useTheme();
+
+  const historyLabel = `Compression history${historyCount > 0 ? ` (${historyCount} sessions)` : ''}`;
 
   return (
     <>
@@ -21,6 +28,19 @@ export const Header: React.FC = () => {
           </div>
 
           <div className="flex items-center space-x-2">
+            <button
+              onClick={onOpenHistory}
+              className="relative p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              aria-label={historyLabel}
+              title={historyLabel}
+            >
+              <History className="w-5 h-5 dark:text-gray-200" />
+              {historyCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[1rem] h-4 px-1 flex items-center justify-center text-[10px] font-semibold text-white bg-blue-600 rounded-full">
+                  {historyCount}
+                </span>
+              )}
+            </button>
             <button
               onClick={toggleTheme}
               className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
@@ -103,6 +123,19 @@ export const Header: React.FC = () => {
           <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
             ImageCompress
           </h1>
+          <button
+            onClick={onOpenHistory}
+            className="relative p-3 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-all duration-300 transform hover:scale-105"
+            aria-label={historyLabel}
+            title={`${historyLabel} — Ctrl+H`}
+          >
+            <History className="w-6 h-6 dark:text-gray-200" />
+            {historyCount > 0 && (
+              <span className="absolute top-1 right-1 min-w-[1.15rem] h-[1.15rem] px-1 flex items-center justify-center text-[10px] font-semibold text-white bg-blue-600 rounded-full">
+                {historyCount}
+              </span>
+            )}
+          </button>
           <button
             onClick={toggleTheme}
             className="p-3 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-all duration-300 transform hover:scale-105"

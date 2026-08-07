@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { formatFileSize } from '../utils/format';
 
 interface ComparisonSliderProps {
   beforeImage: string;
@@ -23,14 +24,6 @@ export const ComparisonSlider: React.FC<ComparisonSliderProps> = ({
   const [sliderPosition, setSliderPosition] = useState(50);
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
-  };
 
   const handleMove = (clientX: number) => {
     if (!containerRef.current) return;

@@ -1,189 +1,295 @@
-import React, { useState, useCallback } from 'react';
-import { useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Header } from './components/Header';
 import { FileUpload } from './components/FileUpload';
 import { CompressionControls } from './components/CompressionControls';
 import { ImagePreview } from './components/ImagePreview';
 import { HistoryPanel } from './components/HistoryPanel';
-import { compressImage, downloadFile, formatFileSize, copyAllImagesToClipboard } from './utils/imageCompression';
-import { getDefaultPreset } from './utils/presets';
-import { exportToZip, changeFileExtension } from './utils/zipExport';
+import {
+  copyImageToClipboard,
+  downloadFile,
+  outputFilename,
+  resolveOutputFormat,
+  revokeResultUrl,
+  type OutputFormat,
+} from './utils/imageCompression';
+import { formatFileSize, createId } from './utils/format';
+import { getDefaultPreset, getPresetById } from './utils/presets';
+import { exportToZip } from './utils/zipExport';
+import { validateFiles } from './utils/fileValidation';
+import { getCompressionConcurrency, runWithConcurrency } from './utils/concurrency';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useCompressionHistory } from './hooks/useCompressionHistory';
-
-interface CompressionResult {
-  file: File;
-  result?: {
-    blob: Blob;
-    url: string;
-    originalSize: number;
-    compressedSize: number;
-    compressionRatio: number;
-    originalWidth: number;
-    originalHeight: number;
-  };
-  isProcessing?: boolean;
-  progress?: number; // 0-100
-}
+import { useCompressionWorker } from './hooks/useCompressionWorker';
+import type { QueuedImage } from './types';
 
 function App() {
   const defaultPreset = getDefaultPreset();
-  const [images, setImages] = useState<CompressionResult[]>([]);
+  const [images, setImages] = useState<QueuedImage[]>([]);
   const [quality, setQuality] = useState(defaultPreset.quality);
   const [maxWidth, setMaxWidth] = useState(defaultPreset.maxWidth);
-  const [format, setFormat] = useState<'jpeg' | 'png' | 'webp'>(defaultPreset.format);
+  const [format, setFormat] = useState<OutputFormat>(defaultPreset.format);
   const [selectedPreset, setSelectedPreset] = useState(defaultPreset.id);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+
   const { history, addSession, deleteSession, clearHistory } = useCompressionHistory();
+  const { compress } = useCompressionWorker();
+  const concurrency = useMemo(() => getCompressionConcurrency(), []);
+
+  // Mirror of `images` for cleanup paths that must not re-run on every change.
+  const imagesRef = useRef<QueuedImage[]>(images);
+  useEffect(() => {
+    imagesRef.current = images;
+  });
+
+  // Compressed blobs are held alive by their object URLs; release everything
+  // outstanding when the app goes away.
+  useEffect(
+    () => () => {
+      imagesRef.current.forEach((image) => revokeResultUrl(image.result));
+    },
+    []
+  );
 
   const handlePresetChange = useCallback((presetId: string) => {
     setSelectedPreset(presetId);
-    // Settings will be updated in CompressionControls when preset changes
+    const preset = getPresetById(presetId);
+    if (presetId !== 'custom' && preset) {
+      setQuality(preset.quality);
+      setMaxWidth(preset.maxWidth);
+      setFormat(preset.format);
+    }
   }, []);
 
   const handleFileSelect = useCallback((files: File[]) => {
-    const newImages = files.map(file => ({ file }));
-    setImages(prev => [...prev, ...newImages]);
-    toast.success(`${files.length} image${files.length > 1 ? 's' : ''} added`);
+    const { accepted, errors } = validateFiles(files, imagesRef.current.length);
+
+    errors.forEach((message) => toast.error(message, { duration: 5000 }));
+
+    if (accepted.length === 0) return;
+
+    const queued = accepted.map<QueuedImage>((file) => ({
+      id: createId(),
+      file,
+      status: 'idle',
+    }));
+
+    setImages((prev) => [...prev, ...queued]);
+    toast.success(`${accepted.length} image${accepted.length > 1 ? 's' : ''} added`);
   }, []);
 
-  // Listen for the custom event from the "Add more" button
-  useEffect(() => {
-    const handleAddMoreImages = (event: CustomEvent) => {
-      handleFileSelect(event.detail);
-    };
-
-    window.addEventListener('addMoreImages', handleAddMoreImages as EventListener);
-    return () => {
-      window.removeEventListener('addMoreImages', handleAddMoreImages as EventListener);
-    };
-  }, [handleFileSelect]);
-
-  const handleRemoveImage = useCallback((index: number) => {
-    setImages(prev => prev.filter((_, i) => i !== index));
+  const handleRemoveImage = useCallback((id: string) => {
+    const target = imagesRef.current.find((image) => image.id === id);
+    revokeResultUrl(target?.result);
+    setImages((prev) => prev.filter((image) => image.id !== id));
   }, []);
 
-  const handleEditImage = useCallback((index: number, editedFile: File) => {
-    setImages(prev => prev.map((img, i) =>
-      i === index ? { file: editedFile } : img
-    ));
+  const handleEditImage = useCallback((id: string, editedFile: File) => {
+    const target = imagesRef.current.find((image) => image.id === id);
+    revokeResultUrl(target?.result);
+    setImages((prev) =>
+      prev.map((image) =>
+        image.id === id
+          ? { id: image.id, file: editedFile, status: 'idle', progress: undefined, result: undefined, error: undefined }
+          : image
+      )
+    );
     toast.success('Image edited successfully');
   }, []);
 
-  const handleCompress = useCallback(async () => {
-    if (images.length === 0) return;
-
-    setIsProcessing(true);
-
-    // Mark all images as processing
-    setImages(prev => prev.map(img => ({ ...img, isProcessing: true, result: undefined })));
-
-    const loadingToast = toast.loading(`Compressing ${images.length} image${images.length > 1 ? 's' : ''}...`);
-
-    try {
-      let successCount = 0;
-      let failureCount = 0;
-
-      const compressionPromises = images.map(async (image, index) => {
-        try {
-          const result = await compressImage(image.file, {
-            quality,
-            maxWidth,
-            format,
-            onProgress: (progress) => {
-              // Update progress for this specific image
-              setImages(prev => prev.map((img, i) =>
-                i === index
-                  ? { ...img, progress }
-                  : img
-              ));
-            },
-          });
-
-          // Update this specific image with its result
-          setImages(prev => prev.map((img, i) =>
-            i === index
-              ? { ...img, result, isProcessing: false, progress: 100 }
-              : img
-          ));
-
-          successCount++;
-          return { ...image, result };
-        } catch (error) {
-          console.error('Compression failed for', image.file.name, error);
-          setImages(prev => prev.map((img, i) =>
-            i === index
-              ? { ...img, isProcessing: false, progress: 0 }
-              : img
-          ));
-          failureCount++;
-          return image;
-        }
-      });
-
-      await Promise.all(compressionPromises);
-
-      toast.dismiss(loadingToast);
-
-      if (failureCount === 0) {
-        toast.success(`Successfully compressed ${successCount} image${successCount > 1 ? 's' : ''}!`);
-        // Save to history
-        addSession(images, { quality, maxWidth, format });
-      } else if (successCount > 0) {
-        toast.success(`Compressed ${successCount} image${successCount > 1 ? 's' : ''}, ${failureCount} failed`);
-        // Save to history even if some failed
-        addSession(images, { quality, maxWidth, format });
-      } else {
-        toast.error('Compression failed for all images');
-      }
-    } catch (error) {
-      toast.dismiss(loadingToast);
-      toast.error('An error occurred during compression');
-    } finally {
-      setIsProcessing(false);
-    }
-  }, [images, quality, maxWidth, format, addSession]);
-
-  const handleDownloadAll = useCallback(() => {
-    const downloadCount = images.filter(img => img.result).length;
-    images.forEach((image) => {
-      if (image.result) {
-        downloadFile(image.result.blob, image.file.name, format);
-      }
-    });
-    toast.success(`Downloaded ${downloadCount} image${downloadCount > 1 ? 's' : ''}`);
-  }, [images, format]);
-
-  const handleCopyAll = async () => {
-    const blobs = images
-      .map(image => image.result?.blob)
-      .filter((blob): blob is Blob => blob !== undefined);
-
-    if (blobs.length === 0) return;
-
-    try {
-      await copyAllImagesToClipboard(blobs);
-      toast.success(`Copied ${blobs.length} image${blobs.length > 1 ? 's' : ''} to clipboard!`);
-    } catch (error) {
-      console.error('Failed to copy all images:', error);
-      toast.error('Failed to copy images to clipboard');
-    }
-  };
-
-  const handleClearAll = () => {
-    const imageCount = images.length;
+  const handleClearAll = useCallback(() => {
+    const count = imagesRef.current.length;
+    imagesRef.current.forEach((image) => revokeResultUrl(image.result));
     setImages([]);
-    toast.success(`Cleared ${imageCount} image${imageCount > 1 ? 's' : ''}`);
-  };
+    if (count > 0) {
+      toast.success(`Cleared ${count} image${count > 1 ? 's' : ''}`);
+    }
+  }, []);
+
+  const runCompression = useCallback(
+    async (targets: QueuedImage[]) => {
+      if (targets.length === 0) return;
+
+      const outputFormat = resolveOutputFormat(format);
+      if (outputFormat !== format) {
+        toast(`${format.toUpperCase()} encoding is not supported in this browser — using JPEG.`, {
+          icon: '⚠️',
+          duration: 5000,
+        });
+      }
+
+      setIsProcessing(true);
+
+      // Drop the previous results (and their object URLs) before re-running.
+      targets.forEach((target) => revokeResultUrl(target.result));
+      const targetIds = new Set(targets.map((target) => target.id));
+      setImages((prev) =>
+        prev.map((image) =>
+          targetIds.has(image.id)
+            ? { ...image, status: 'processing', progress: 0, result: undefined, error: undefined }
+            : image
+        )
+      );
+
+      const loadingToast = toast.loading(
+        `Compressing ${targets.length} image${targets.length > 1 ? 's' : ''}...`
+      );
+
+      try {
+        // A bounded pool: every in-flight image holds a decoded bitmap, so
+        // starting them all at once is how tabs die.
+        const settled = await runWithConcurrency(targets, concurrency, async (target) => {
+          try {
+            const result = await compress(target.file, {
+              quality,
+              maxWidth,
+              format: outputFormat,
+              onProgress: (progress) => {
+                setImages((prev) =>
+                  prev.map((image) => (image.id === target.id ? { ...image, progress } : image))
+                );
+              },
+            });
+
+            setImages((prev) =>
+              prev.map((image) =>
+                image.id === target.id
+                  ? { ...image, result, status: 'done', progress: 100, error: undefined }
+                  : image
+              )
+            );
+
+            return { target, result, error: null as string | null };
+          } catch (error) {
+            console.error('Compression failed for', target.file.name, error);
+            const message =
+              error instanceof Error
+                ? error.message
+                : `Could not compress "${target.file.name}".`;
+
+            setImages((prev) =>
+              prev.map((image) =>
+                image.id === target.id
+                  ? { ...image, status: 'error', progress: 0, result: undefined, error: message }
+                  : image
+              )
+            );
+
+            return { target, result: null, error: message };
+          }
+        });
+
+        const outcomes = settled.flatMap((entry) =>
+          entry.status === 'fulfilled' ? [entry.value] : []
+        );
+        const succeeded = outcomes.filter((outcome) => outcome.result);
+        const failed = outcomes.length - succeeded.length;
+
+        toast.dismiss(loadingToast);
+
+        if (succeeded.length > 0) {
+          // Built from the settled results, not from component state — the
+          // state write-backs have not necessarily landed yet.
+          addSession(
+            outcomes.map((outcome) => ({
+              fileName: outcome.target.file.name,
+              originalSize: outcome.target.file.size,
+              compressedSize: outcome.result?.compressedSize,
+              compressionRatio: outcome.result?.compressionRatio,
+            })),
+            { quality, maxWidth, format: outputFormat }
+          );
+        }
+
+        if (failed === 0) {
+          toast.success(`Compressed ${succeeded.length} image${succeeded.length > 1 ? 's' : ''}`);
+        } else if (succeeded.length > 0) {
+          toast.error(
+            `Compressed ${succeeded.length}, ${failed} failed — see the highlighted cards to retry.`,
+            { duration: 6000 }
+          );
+        } else {
+          toast.error('Compression failed — see the highlighted cards for details.', {
+            duration: 6000,
+          });
+        }
+      } finally {
+        setIsProcessing(false);
+      }
+    },
+    [addSession, compress, concurrency, format, maxWidth, quality]
+  );
+
+  const handleCompress = useCallback(() => {
+    if (isProcessing) return;
+    void runCompression(imagesRef.current);
+  }, [isProcessing, runCompression]);
+
+  const handleRetry = useCallback(
+    (id: string) => {
+      if (isProcessing) return;
+      const target = imagesRef.current.find((image) => image.id === id);
+      if (target) {
+        void runCompression([target]);
+      }
+    },
+    [isProcessing, runCompression]
+  );
+
+  const handleDownloadAll = useCallback(async () => {
+    const ready = imagesRef.current.filter((image) => image.result);
+    if (ready.length === 0) {
+      toast.error('No compressed images to download');
+      return;
+    }
+
+    // Browsers throttle or block bursts of anchor clicks, so they are staggered
+    // and the ZIP export stays the recommended path for larger batches.
+    for (let i = 0; i < ready.length; i += 1) {
+      const image = ready[i];
+      downloadFile(image.result!.blob, outputFilename(image.file.name, image.result!.outputType));
+      if (i < ready.length - 1) {
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      }
+    }
+
+    toast.success(
+      ready.length > 3
+        ? `Downloading ${ready.length} images — use "Download as ZIP" if your browser blocks some.`
+        : `Downloaded ${ready.length} image${ready.length > 1 ? 's' : ''}`
+    );
+  }, []);
+
+  const handleCopyImage = useCallback(async () => {
+    const ready = imagesRef.current.filter((image) => image.result);
+    if (ready.length === 0) {
+      toast.error('No compressed images to copy');
+      return;
+    }
+
+    const [first] = ready;
+    try {
+      const copiedType = await copyImageToClipboard(first.result!.blob);
+      const asPng = copiedType === 'image/png' && first.result!.outputType !== 'image/png';
+      const suffix = ready.length > 1 ? ' (the clipboard holds one image at a time)' : '';
+      toast.success(
+        `Copied "${first.file.name}"${asPng ? ' as PNG' : ''} to the clipboard${suffix}`
+      );
+    } catch (error) {
+      console.error('Failed to copy image:', error);
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to copy the image to the clipboard'
+      );
+    }
+  }, []);
 
   const handleDownloadAsZip = useCallback(async () => {
-    const compressedImages = images
-      .filter(img => img.result)
-      .map(img => ({
-        blob: img.result!.blob,
-        filename: changeFileExtension(img.file.name, format),
+    const compressedImages = imagesRef.current
+      .filter((image) => image.result)
+      .map((image) => ({
+        blob: image.result!.blob,
+        filename: outputFilename(image.file.name, image.result!.outputType),
       }));
 
     if (compressedImages.length === 0) {
@@ -191,25 +297,31 @@ function App() {
       return;
     }
 
+    const zipLoadingToast = toast.loading('Creating ZIP file...');
     try {
-      const zipLoadingToast = toast.loading('Creating ZIP file...');
       await exportToZip(compressedImages, 'compressed-images.zip');
       toast.dismiss(zipLoadingToast);
-      toast.success(`Downloaded ${compressedImages.length} image${compressedImages.length > 1 ? 's' : ''} as ZIP`);
+      toast.success(
+        `Downloaded ${compressedImages.length} image${compressedImages.length > 1 ? 's' : ''} as ZIP`
+      );
     } catch (error) {
+      toast.dismiss(zipLoadingToast);
       console.error('Failed to create ZIP:', error);
       toast.error('Failed to create ZIP file');
     }
-  }, [images, format]);
+  }, []);
 
-  const hasResults = images.some(img => img.result);
-  const totalOriginalSize = images.reduce((sum, img) => sum + img.file.size, 0);
-  const totalCompressedSize = images.reduce((sum, img) => sum + (img.result?.compressedSize || 0), 0);
-  const overallCompressionRatio = totalOriginalSize > 0
-    ? ((totalOriginalSize - totalCompressedSize) / totalOriginalSize) * 100
-    : 0;
+  const hasResults = images.some((image) => image.result);
+  const totalOriginalSize = images.reduce((sum, image) => sum + image.file.size, 0);
+  const totalCompressedSize = images.reduce(
+    (sum, image) => sum + (image.result?.compressedSize ?? image.file.size),
+    0
+  );
+  const overallCompressionRatio =
+    totalOriginalSize > 0
+      ? Math.max(0, ((totalOriginalSize - totalCompressedSize) / totalOriginalSize) * 100)
+      : 0;
 
-  // Keyboard shortcuts
   useKeyboardShortcuts([
     {
       key: 'Enter',
@@ -222,11 +334,11 @@ function App() {
       description: 'Compress images',
     },
     {
-      key: 'z',
+      key: 's',
       ctrl: true,
       action: () => {
         if (hasResults) {
-          handleDownloadAsZip();
+          void handleDownloadAsZip();
         }
       },
       description: 'Download as ZIP',
@@ -237,10 +349,10 @@ function App() {
       shift: true,
       action: () => {
         if (hasResults) {
-          handleCopyAll();
+          void handleCopyImage();
         }
       },
-      description: 'Copy all images',
+      description: 'Copy compressed image',
     },
     {
       key: 'd',
@@ -248,7 +360,7 @@ function App() {
       shift: true,
       action: () => {
         if (hasResults) {
-          handleDownloadAll();
+          void handleDownloadAll();
         }
       },
       description: 'Download all images',
@@ -256,7 +368,7 @@ function App() {
     {
       key: 'Delete',
       action: () => {
-        if (images.length > 0) {
+        if (images.length > 0 && !isProcessing) {
           handleClearAll();
         }
       },
@@ -265,47 +377,45 @@ function App() {
     {
       key: 'h',
       ctrl: true,
-      action: () => {
-        setShowHistory(true);
-      },
+      action: () => setShowHistory(true),
       description: 'View history',
     },
   ]);
 
+  const controls = (
+    <CompressionControls
+      quality={quality}
+      onQualityChange={setQuality}
+      maxWidth={maxWidth}
+      onMaxWidthChange={setMaxWidth}
+      format={format}
+      onFormatChange={setFormat}
+      selectedPreset={selectedPreset}
+      onPresetChange={handlePresetChange}
+      onCompress={handleCompress}
+      onDownloadAll={handleDownloadAll}
+      onDownloadAsZip={handleDownloadAsZip}
+      onCopyImage={handleCopyImage}
+      onClearAll={handleClearAll}
+      isProcessing={isProcessing}
+      hasImages={images.length > 0}
+      hasResults={hasResults}
+    />
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-dark-bg dark:via-gray-900 dark:to-dark-bg font-satoshi transition-colors duration-300">
       <div className="container mx-auto px-4 py-8">
-        <Header />
+        <Header historyCount={history.length} onOpenHistory={() => setShowHistory(true)} />
 
         <div className="max-w-6xl mx-auto mt-8">
-          {/* Compression Controls - Moved to top on mobile/tablet */}
-          {images.length > 0 && (
-            <div className="lg:hidden mb-8">
-              <CompressionControls
-                quality={quality}
-                onQualityChange={setQuality}
-                maxWidth={maxWidth}
-                onMaxWidthChange={setMaxWidth}
-                format={format}
-                onFormatChange={setFormat}
-                selectedPreset={selectedPreset}
-                onPresetChange={handlePresetChange}
-                onCompress={handleCompress}
-                onDownloadAll={handleDownloadAll}
-                onDownloadAsZip={handleDownloadAsZip}
-                onCopyAll={handleCopyAll}
-                onClearAll={handleClearAll}
-                isProcessing={isProcessing}
-                hasImages={images.length > 0}
-                hasResults={hasResults}
-              />
-            </div>
-          )}
+          {/* Controls sit above the grid on small screens, in the sidebar on desktop. */}
+          {images.length > 0 && <div className="lg:hidden mb-8">{controls}</div>}
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-8">
-              <FileUpload 
-                onFileSelect={handleFileSelect} 
+              <FileUpload
+                onFileSelect={handleFileSelect}
                 isProcessing={isProcessing}
                 hasImages={images.length > 0}
               />
@@ -319,13 +429,13 @@ function App() {
                     <div>
                       <span className="text-gray-600 dark:text-gray-400">Total Original Size:</span>
                       <div className="font-semibold text-gray-900 dark:text-gray-100">
-                        {(totalOriginalSize / (1024 * 1024)).toFixed(2)} MB
+                        {formatFileSize(totalOriginalSize)}
                       </div>
                     </div>
                     <div>
                       <span className="text-gray-600 dark:text-gray-400">Total Compressed Size:</span>
                       <div className="font-semibold text-green-600 dark:text-green-400">
-                        {(totalCompressedSize / 1024).toFixed(2)} KB
+                        {formatFileSize(totalCompressedSize)}
                       </div>
                     </div>
                     <div className="col-span-2">
@@ -337,38 +447,19 @@ function App() {
                   </div>
                 </div>
               )}
-              
+
               {images.length > 0 && (
                 <ImagePreview
-              images={images}
-              onRemove={handleRemoveImage}
-              onEdit={handleEditImage}
-              format={format}
-            />
+                  images={images}
+                  onRemove={handleRemoveImage}
+                  onEdit={handleEditImage}
+                  onRetry={handleRetry}
+                  isProcessing={isProcessing}
+                />
               )}
             </div>
 
-            {/* Compression Controls - Desktop sidebar */}
-            <div className="hidden lg:block">
-              <CompressionControls
-                quality={quality}
-                onQualityChange={setQuality}
-                maxWidth={maxWidth}
-                onMaxWidthChange={setMaxWidth}
-                format={format}
-                onFormatChange={setFormat}
-                selectedPreset={selectedPreset}
-                onPresetChange={handlePresetChange}
-                onCompress={handleCompress}
-                onDownloadAll={handleDownloadAll}
-                onDownloadAsZip={handleDownloadAsZip}
-                onCopyAll={handleCopyAll}
-                onClearAll={handleClearAll}
-                isProcessing={isProcessing}
-                hasImages={images.length > 0}
-                hasResults={hasResults}
-              />
-            </div>
+            <div className="hidden lg:block">{controls}</div>
           </div>
         </div>
 
@@ -388,7 +479,6 @@ function App() {
         </footer>
       </div>
 
-      {/* History Panel */}
       {showHistory && (
         <HistoryPanel
           history={history}

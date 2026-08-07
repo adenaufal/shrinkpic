@@ -1,6 +1,7 @@
 import React from 'react';
-import { History, Trash2, Clock, FileImage, Download, X } from 'lucide-react';
+import { History, Trash2, Clock, FileImage, X } from 'lucide-react';
 import { HistorySession } from '../hooks/useCompressionHistory';
+import { formatFileSize } from '../utils/format';
 
 interface HistoryPanelProps {
   history: HistorySession[];
@@ -29,14 +30,6 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
     if (diffDays < 7) return `${diffDays}d ago`;
 
     return date.toLocaleDateString();
-  };
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   return (
@@ -87,13 +80,18 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
                   (sum, img) => sum + img.originalSize,
                   0
                 );
+                // Files that failed contribute their original size, so a
+                // session can never claim a saving it did not make.
                 const totalCompressedSize = session.images.reduce(
-                  (sum, img) => sum + (img.compressedSize || 0),
+                  (sum, img) => sum + (img.compressedSize ?? img.originalSize),
                   0
                 );
                 const overallRatio =
                   totalOriginalSize > 0
-                    ? ((totalOriginalSize - totalCompressedSize) / totalOriginalSize) * 100
+                    ? Math.max(
+                        0,
+                        ((totalOriginalSize - totalCompressedSize) / totalOriginalSize) * 100
+                      )
                     : 0;
 
                 return (
