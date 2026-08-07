@@ -84,27 +84,27 @@ export const ComparisonSlider: React.FC<ComparisonSliderProps> = ({
     >
       <DialogPanel className="max-w-6xl">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 md:p-6 border-b border-gray-200 dark:border-dark-border">
+        <div className="flex items-start justify-between gap-4 border-b border-gray-200 p-4 dark:border-dark-border md:p-6">
           <div className="min-w-0">
-            <DialogPrimitive.Title className="text-lg md:text-xl font-semibold text-gray-900 dark:text-gray-100 truncate">
+            <DialogPrimitive.Title className="truncate text-base font-semibold text-gray-900 dark:text-gray-100">
               {fileName}
             </DialogPrimitive.Title>
-            <DialogPrimitive.Description className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            <DialogPrimitive.Description className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
               Drag the slider, or focus it and use the arrow keys, to compare images
             </DialogPrimitive.Description>
           </div>
           <DialogClose asChild>
             <button
-              className="flex-shrink-0 p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+              className="btn btn-ghost btn-icon -mr-2"
               aria-label="Close comparison"
             >
-              <X className="w-6 h-6" />
+              <X className="h-5 w-5" aria-hidden="true" />
             </button>
           </DialogClose>
         </div>
 
         {/* Stats Bar */}
-        <div className="grid grid-cols-3 gap-4 p-4 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-dark-border">
+        <div className="grid grid-cols-3 gap-4 border-b border-gray-200 p-4 dark:border-dark-border">
           <div className="text-center">
             <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Original Size</p>
             <p className="text-sm md:text-base font-semibold text-gray-900 dark:text-gray-100">
@@ -113,13 +113,13 @@ export const ComparisonSlider: React.FC<ComparisonSliderProps> = ({
           </div>
           <div className="text-center">
             <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Compressed Size</p>
-            <p className="text-sm md:text-base font-semibold text-green-600 dark:text-green-400">
+            <p className="text-sm md:text-base font-semibold text-gray-900 dark:text-gray-100">
               {formatFileSize(compressedSize)}
             </p>
           </div>
           <div className="text-center">
             <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Size Reduction</p>
-            <p className="text-sm md:text-base font-semibold text-blue-600 dark:text-blue-400">
+            <p className="text-sm md:text-base font-semibold text-brand-600 dark:text-brand-400">
               {compressionRatio.toFixed(1)}%
             </p>
           </div>
@@ -163,10 +163,10 @@ export const ComparisonSlider: React.FC<ComparisonSliderProps> = ({
               at every slider position, matching what each side actually
               renders: Compressed on the left (After layer), Original on the
               right (Before layer showing through). */}
-          <div className="absolute top-4 left-4 px-3 py-1.5 bg-black/70 text-white text-xs md:text-sm font-medium rounded-lg backdrop-blur-sm pointer-events-none">
+          <div className="pointer-events-none absolute left-3 top-3 rounded-lg bg-gray-900/70 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-sm">
             Compressed
           </div>
-          <div className="absolute top-4 right-4 px-3 py-1.5 bg-black/70 text-white text-xs md:text-sm font-medium rounded-lg backdrop-blur-sm pointer-events-none">
+          <div className="pointer-events-none absolute right-3 top-3 rounded-lg bg-gray-900/70 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-sm">
             Original
           </div>
 
@@ -187,7 +187,7 @@ export const ComparisonSlider: React.FC<ComparisonSliderProps> = ({
               aria-valuenow={Math.round(sliderPosition)}
               aria-valuetext={`${Math.round(sliderPosition)}% compressed, ${100 - Math.round(sliderPosition)}% original`}
               onKeyDown={handleKeyDown}
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 bg-white dark:bg-gray-800 rounded-full shadow-xl flex items-center justify-center border-2 border-gray-200 dark:border-gray-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 bg-white dark:bg-gray-800 rounded-full shadow-xl flex items-center justify-center border-2 border-gray-200 dark:border-gray-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
             >
               <ChevronLeft className="w-4 h-4 text-gray-600 dark:text-gray-400 absolute left-1" />
               <ChevronRight className="w-4 h-4 text-gray-600 dark:text-gray-400 absolute right-1" />
@@ -196,15 +196,15 @@ export const ComparisonSlider: React.FC<ComparisonSliderProps> = ({
         </div>
 
         {/* Footer Instructions */}
-        <div className="p-4 bg-gray-50 dark:bg-gray-900/50 border-t border-gray-200 dark:border-dark-border">
+        <div className="border-t border-gray-200 p-4 dark:border-dark-border">
           <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-gray-600 dark:text-gray-400">
             <span className="flex items-center gap-1">
-              <kbd className="px-2 py-1 bg-white dark:bg-gray-800 rounded border border-gray-300 dark:border-gray-600">←</kbd>
-              <kbd className="px-2 py-1 bg-white dark:bg-gray-800 rounded border border-gray-300 dark:border-gray-600">→</kbd>
+              <kbd className="rounded border border-gray-200 px-1.5 py-0.5 dark:border-dark-border">←</kbd>
+              <kbd className="rounded border border-gray-200 px-1.5 py-0.5 dark:border-dark-border">→</kbd>
               Move the focused slider
             </span>
             <span className="flex items-center gap-1">
-              <kbd className="px-2 py-1 bg-white dark:bg-gray-800 rounded border border-gray-300 dark:border-gray-600">Esc</kbd>
+              <kbd className="rounded border border-gray-200 px-1.5 py-0.5 dark:border-dark-border">Esc</kbd>
               Close
             </span>
           </div>

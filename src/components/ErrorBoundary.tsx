@@ -53,7 +53,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
           </pre>
           <button
             onClick={this.handleReload}
-            className="inline-flex items-center justify-center gap-2 w-full bg-blue-600 dark:bg-blue-500 text-white px-4 py-2.5 rounded-lg font-medium hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
+            className="inline-flex items-center justify-center gap-2 w-full bg-brand-600 dark:bg-brand-500 text-white px-4 py-2.5 rounded-lg font-medium hover:bg-brand-700 dark:hover:bg-brand-600 transition-colors"
           >
             <RotateCcw className="w-4 h-4" />
             Reload ImageCompress

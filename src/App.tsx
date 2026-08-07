@@ -5,6 +5,7 @@ import { Hero } from './components/Hero';
 import { SiteFooter } from './components/SiteFooter';
 import { FileUpload } from './components/FileUpload';
 import { CompressionControls } from './components/CompressionControls';
+import { ActionBar } from './components/ActionBar';
 import { ImagePreview } from './components/ImagePreview';
 import { HistoryPanel } from './components/HistoryPanel';
 import {
@@ -15,7 +16,7 @@ import {
   revokeResultUrl,
   type OutputFormat,
 } from './utils/imageCompression';
-import { formatFileSize, createId } from './utils/format';
+import { createId } from './utils/format';
 import { getDefaultPreset, getPresetById } from './utils/presets';
 import { validateFiles } from './utils/fileValidation';
 import { isSameQueueEntry, updateQueueEntry } from './utils/queue';
@@ -343,15 +344,7 @@ function App() {
   }, []);
 
   const hasResults = images.some((image) => image.result);
-  const totalOriginalSize = images.reduce((sum, image) => sum + image.file.size, 0);
-  const totalCompressedSize = images.reduce(
-    (sum, image) => sum + (image.result?.compressedSize ?? image.file.size),
-    0
-  );
-  const overallCompressionRatio =
-    totalOriginalSize > 0
-      ? Math.max(0, ((totalOriginalSize - totalCompressedSize) / totalOriginalSize) * 100)
-      : 0;
+  const hasImages = images.length > 0;
 
   // Global shortcuts stand down while any modal is up: Delete would otherwise
   // clear the queue from inside the image editor (taking the unsaved edit with
@@ -421,32 +414,17 @@ function App() {
     !anyModalOpen
   );
 
-  const controls = (
-    <CompressionControls
-      quality={quality}
-      onQualityChange={setQuality}
-      maxWidth={maxWidth}
-      onMaxWidthChange={setMaxWidth}
-      format={format}
-      onFormatChange={setFormat}
-      selectedPreset={selectedPreset}
-      onPresetChange={handlePresetChange}
-      onCompress={handleCompress}
-      onDownloadAll={handleDownloadAll}
-      onDownloadAsZip={handleDownloadAsZip}
-      onCopyImage={handleCopyImage}
-      onClearAll={handleClearAll}
-      isProcessing={isProcessing}
-      hasImages={images.length > 0}
-      hasResults={hasResults}
-    />
-  );
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-dark-bg dark:via-gray-900 dark:to-dark-bg font-sans transition-colors duration-300">
+    // The bottom padding reserves room for the fixed action bar on small
+    // screens; from `md` up the bar sits in the page flow and needs none.
+    <div
+      className={`min-h-screen bg-gray-50 font-sans text-gray-900 dark:bg-dark-bg dark:text-gray-100 ${
+        hasImages ? 'pb-24 md:pb-0' : ''
+      }`}
+    >
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:rounded-lg focus:bg-blue-600 focus:px-4 focus:py-2 focus:text-white focus:shadow-lg"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-brand-600 focus:px-4 focus:py-2 focus:text-white"
       >
         Skip to content
       </a>
@@ -457,75 +435,59 @@ function App() {
         {announcement}
       </div>
 
-      <div className="container mx-auto px-4 py-8">
-        <Header historyCount={history.length} onOpenHistory={() => setShowHistory(true)} />
+      <Header historyCount={history.length} onOpenHistory={() => setShowHistory(true)} />
 
-        <div className="max-w-6xl mx-auto">
-          {/* The pitch stays above the tool, but collapses to one line once the
-              queue is busy so the uploader is never pushed below the fold. */}
-          <Hero compact={images.length > 0} />
-        </div>
+      {/* One column at every breakpoint, read top to bottom: pitch, drop zone,
+          settings, one primary action, results. */}
+      <main id="main-content" className="mx-auto w-full max-w-5xl px-4 pb-8">
+        {/* The pitch collapses to one line once there is work in the queue, so
+            the uploader is never pushed below the fold. */}
+        <Hero compact={hasImages} />
 
-        <main id="main-content" className="max-w-6xl mx-auto mt-8">
-          {/* Controls sit above the grid on small screens, in the sidebar on desktop. */}
-          {images.length > 0 && <div className="lg:hidden mb-8">{controls}</div>}
+        <div className="space-y-4">
+          <FileUpload
+            onFileSelect={handleFileSelect}
+            isProcessing={isProcessing}
+            hasImages={hasImages}
+          />
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-8">
-              <FileUpload
-                onFileSelect={handleFileSelect}
-                isProcessing={isProcessing}
-                hasImages={images.length > 0}
+          {hasImages && (
+            <>
+              <CompressionControls
+                quality={quality}
+                onQualityChange={setQuality}
+                maxWidth={maxWidth}
+                onMaxWidthChange={setMaxWidth}
+                format={format}
+                onFormatChange={setFormat}
+                selectedPreset={selectedPreset}
+                onPresetChange={handlePresetChange}
               />
 
-              {hasResults && (
-                <div className="bg-white dark:bg-dark-card rounded-2xl p-6 border border-gray-200 dark:border-dark-border shadow-sm animate-fade-in">
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
-                    Compression Summary
-                  </h2>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-gray-600 dark:text-gray-400">Total Original Size:</span>
-                      <div className="font-semibold text-gray-900 dark:text-gray-100">
-                        {formatFileSize(totalOriginalSize)}
-                      </div>
-                    </div>
-                    <div>
-                      <span className="text-gray-600 dark:text-gray-400">Total Compressed Size:</span>
-                      <div className="font-semibold text-green-600 dark:text-green-400">
-                        {formatFileSize(totalCompressedSize)}
-                      </div>
-                    </div>
-                    <div className="col-span-2">
-                      <span className="text-gray-600 dark:text-gray-400">Overall Space Saved:</span>
-                      <div className="font-bold text-green-600 dark:text-green-400 text-lg">
-                        {overallCompressionRatio.toFixed(1)}%
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
+              <ActionBar
+                onCompress={handleCompress}
+                onDownloadAll={handleDownloadAll}
+                onDownloadAsZip={handleDownloadAsZip}
+                onClearAll={handleClearAll}
+                isProcessing={isProcessing}
+                imageCount={images.length}
+                hasResults={hasResults}
+              />
 
-              {images.length > 0 && (
-                <ImagePreview
-                  images={images}
-                  onRemove={handleRemoveImage}
-                  onEdit={handleEditImage}
-                  onRetry={handleRetry}
-                  isProcessing={isProcessing}
-                  onModalOpenChange={setPreviewModalOpen}
-                />
-              )}
-            </div>
-
-            <div className="hidden lg:block">{controls}</div>
-          </div>
-        </main>
-
-        <div className="max-w-6xl mx-auto">
-          <SiteFooter />
+              <ImagePreview
+                images={images}
+                onRemove={handleRemoveImage}
+                onEdit={handleEditImage}
+                onRetry={handleRetry}
+                isProcessing={isProcessing}
+                onModalOpenChange={setPreviewModalOpen}
+              />
+            </>
+          )}
         </div>
-      </div>
+      </main>
+
+      <SiteFooter />
 
       <HistoryPanel
         open={showHistory}

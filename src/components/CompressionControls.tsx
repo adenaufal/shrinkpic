@@ -1,6 +1,6 @@
 import React from 'react';
-import { Settings, Zap, Download, Copy, Trash2, Archive } from 'lucide-react';
-import { COMPRESSION_PRESETS } from '../utils/presets';
+import { ChevronDown } from 'lucide-react';
+import { COMPRESSION_PRESETS, getPresetById } from '../utils/presets';
 import { isFormatSupported, type OutputFormat } from '../utils/imageCompression';
 
 interface CompressionControlsProps {
@@ -12,16 +12,19 @@ interface CompressionControlsProps {
   onFormatChange: (format: OutputFormat) => void;
   selectedPreset: string;
   onPresetChange: (presetId: string) => void;
-  onCompress: () => void;
-  onDownloadAll: () => void;
-  onDownloadAsZip: () => void;
-  onCopyImage: () => void;
-  onClearAll: () => void;
-  isProcessing: boolean;
-  hasImages: boolean;
-  hasResults: boolean;
 }
 
+const FORMATS: OutputFormat[] = ['jpeg', 'png', 'webp'];
+
+/**
+ * Settings only — the Compress and batch actions live in <ActionBar> so there
+ * is exactly one place to act on the queue. Two decisions are on the surface
+ * (preset and output format); quality and maximum dimension sit behind a
+ * disclosure because a preset already answers both for most people.
+ *
+ * This component is mounted once and reflows; the previous version was
+ * rendered twice (once per breakpoint) with two copies of every control.
+ */
 export const CompressionControls: React.FC<CompressionControlsProps> = ({
   quality,
   onQualityChange,
@@ -31,18 +34,9 @@ export const CompressionControls: React.FC<CompressionControlsProps> = ({
   onFormatChange,
   selectedPreset,
   onPresetChange,
-  onCompress,
-  onDownloadAll,
-  onDownloadAsZip,
-  onCopyImage,
-  onClearAll,
-  isProcessing,
-  hasImages,
-  hasResults,
 }) => {
   // Preset resolution lives in App: this component only reports what the user
-  // touched. Applying presets from an effect in here ran twice (the controls
-  // are mounted for both breakpoints) and could clobber in-flight settings.
+  // touched.
   const markCustom = () => {
     if (selectedPreset !== 'custom') {
       onPresetChange('custom');
@@ -64,49 +58,91 @@ export const CompressionControls: React.FC<CompressionControlsProps> = ({
     markCustom();
   };
 
-  return (
-    <div className="bg-white dark:bg-dark-card rounded-xl p-2 md:p-6 shadow-lg border border-gray-100 dark:border-dark-border transition-colors duration-300">
-      <div className="flex items-center space-x-1.5 mb-2 md:mb-6">
-        <Settings className="w-4 h-4 md:w-5 md:h-5 text-blue-600 dark:text-blue-400" />
-        <h2 className="text-sm md:text-lg font-semibold text-gray-900 dark:text-gray-100">Compression Settings</h2>
-      </div>
+  const presetDescription = getPresetById(selectedPreset)?.description;
 
-      <div className="space-y-2 md:space-y-6">
-        {/* Preset Selector */}
+  return (
+    <section className="surface p-4 md:p-5" aria-labelledby="settings-heading">
+      <h2
+        id="settings-heading"
+        className="text-sm font-semibold text-gray-900 dark:text-gray-100"
+      >
+        Settings
+      </h2>
+
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
         <div>
-          <label
-            htmlFor="preset-select"
-            className="block text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 md:mb-3"
-          >
-            Quick Presets
+          <label htmlFor="preset-select" className="field-label">
+            Preset
           </label>
           <select
             id="preset-select"
             value={selectedPreset}
             onChange={(e) => onPresetChange(e.target.value)}
-            className="w-full p-1.5 md:p-3 text-xs md:text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md md:rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="field"
           >
             {COMPRESSION_PRESETS.map((preset) => (
               <option key={preset.id} value={preset.id}>
-                {preset.icon} {preset.name} - {preset.description}
+                {preset.name}
               </option>
             ))}
           </select>
         </div>
 
         <div>
-          <label
-            htmlFor="quality-range"
-            className="block text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 md:mb-3"
+          <span id="format-group-label" className="field-label">
+            Format
+          </span>
+          <div
+            className="grid grid-cols-3 gap-1 rounded-xl border border-gray-200 p-1 dark:border-dark-border"
+            role="group"
+            aria-labelledby="format-group-label"
           >
-            Quality: {Math.round(quality * 100)}%
-            {format === 'png' && (
-              <span className="ml-1 font-normal text-gray-500 dark:text-gray-400">
-                (PNG is lossless — quality has no effect)
-              </span>
-            )}
-          </label>
-          <div className="relative">
+            {FORMATS.map((fmt) => {
+              const supported = isFormatSupported(fmt);
+              const active = format === fmt;
+              return (
+                <button
+                  key={fmt}
+                  type="button"
+                  onClick={() => handleFormatChange(fmt)}
+                  disabled={!supported}
+                  className={`min-h-[2.25rem] rounded-lg text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 disabled:cursor-not-allowed disabled:opacity-40 ${
+                    active
+                      ? 'bg-brand-600 text-white dark:bg-brand-500'
+                      : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'
+                  }`}
+                  aria-pressed={active}
+                  title={supported ? undefined : `This browser cannot encode ${fmt.toUpperCase()}`}
+                >
+                  {fmt.toUpperCase()}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      <p className="mt-3 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+        {presetDescription ? `${presetDescription} · ` : ''}
+        {format === 'png'
+          ? 'PNG is lossless, so quality has no effect — photos usually come out larger and the original is kept when that happens.'
+          : `${Math.round(quality * 100)}% quality, max ${maxWidth}px`}
+      </p>
+
+      <details className="group mt-4 border-t border-gray-200 pt-1 dark:border-dark-border">
+        <summary className="flex min-h-[2.75rem] cursor-pointer list-none items-center justify-between text-sm font-medium text-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-gray-300 [&::-webkit-details-marker]:hidden">
+          Advanced
+          <ChevronDown
+            className="h-4 w-4 text-gray-400 transition-transform group-open:rotate-180"
+            aria-hidden="true"
+          />
+        </summary>
+
+        <div className="grid gap-4 pb-1 sm:grid-cols-2">
+          <div>
+            <label htmlFor="quality-range" className="field-label">
+              Quality: {Math.round(quality * 100)}%
+            </label>
             <input
               id="quality-range"
               type="range"
@@ -116,129 +152,32 @@ export const CompressionControls: React.FC<CompressionControlsProps> = ({
               value={quality}
               disabled={format === 'png'}
               onChange={(e) => handleQualityChange(parseFloat(e.target.value))}
-              className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer slider disabled:opacity-50 disabled:cursor-not-allowed"
+              className="h-2 w-full cursor-pointer accent-brand-600 disabled:cursor-not-allowed disabled:opacity-50 dark:accent-brand-500"
             />
-            <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
-              <span className="text-xs">High compression</span>
-              <span className="text-xs">Best quality</span>
+            <div className="mt-1 flex justify-between text-xs text-gray-500 dark:text-gray-400">
+              <span>Smaller file</span>
+              <span>Better quality</span>
             </div>
           </div>
-        </div>
 
-        <div>
-          <label
-            htmlFor="max-dimension-select"
-            className="block text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 md:mb-3"
-          >
-            Max Dimension: {maxWidth}px
-          </label>
-          <select
-            id="max-dimension-select"
-            value={maxWidth}
-            onChange={(e) => handleMaxWidthChange(parseInt(e.target.value))}
-            className="w-full p-1.5 md:p-3 text-xs md:text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md md:rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value={800}>800px (Small)</option>
-            <option value={1200}>1200px (Medium)</option>
-            <option value={1920}>1920px (Large)</option>
-            <option value={2560}>2560px (Extra Large)</option>
-          </select>
-        </div>
-
-        <div>
-          <span
-            id="format-group-label"
-            className="block text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 md:mb-3"
-          >
-            Output Format
-          </span>
-          <div className="grid grid-cols-3 gap-0.5 md:gap-2" role="group" aria-labelledby="format-group-label">
-            {(['jpeg', 'png', 'webp'] as const).map((fmt) => {
-              const supported = isFormatSupported(fmt);
-              return (
-                <button
-                  key={fmt}
-                  onClick={() => handleFormatChange(fmt)}
-                  disabled={!supported}
-                  className={`p-1 md:p-3 text-xs md:text-sm font-medium rounded-md md:rounded-lg transition-all duration-200 transform active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${
-                    format === fmt
-                      ? 'bg-blue-600 dark:bg-blue-500 text-white'
-                      : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                  }`}
-                  aria-label={`Select ${fmt.toUpperCase()} format`}
-                  aria-pressed={format === fmt}
-                  title={supported ? undefined : `This browser cannot encode ${fmt.toUpperCase()}`}
-                >
-                  {fmt.toUpperCase()}
-                </button>
-              );
-            })}
-          </div>
-          {format === 'png' && (
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              PNG is lossless — photos usually come out larger. The original is kept when that happens.
-            </p>
-          )}
-        </div>
-
-        <div className="space-y-1 md:space-y-3 pt-1.5 md:pt-4">
-          <button
-            onClick={onCompress}
-            disabled={!hasImages || isProcessing}
-            className="w-full flex items-center justify-center space-x-1 bg-blue-600 dark:bg-blue-500 text-white px-1.5 md:px-4 py-1 md:py-3 rounded-md md:rounded-lg font-medium hover:bg-blue-700 dark:hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform active:scale-95 text-xs md:text-base"
-            aria-label={isProcessing ? 'Compressing images' : 'Compress images'}
-          >
-            <Zap className="w-3 h-3 md:w-4 md:h-4" />
-            <span>
-              {isProcessing ? 'Compressing...' : 'Compress Images'}
-            </span>
-          </button>
-
-          {hasResults && (
-            <>
-              <div className="grid grid-cols-2 gap-0.5 md:gap-2">
-                <button
-                  onClick={onCopyImage}
-                  className="flex items-center justify-center space-x-0.5 bg-green-600 dark:bg-green-500 text-white px-1 md:px-3 py-1 md:py-2.5 rounded-md md:rounded-lg font-medium hover:bg-green-700 dark:hover:bg-green-600 transition-all duration-200 transform active:scale-95 text-xs md:text-sm"
-                  aria-label="Copy the first compressed image to the clipboard"
-                  title="The clipboard holds one image at a time"
-                >
-                  <Copy className="w-3 h-3 md:w-4 md:h-4" />
-                  <span>Copy</span>
-                </button>
-                <button
-                  onClick={onDownloadAll}
-                  className="flex items-center justify-center space-x-0.5 bg-purple-600 dark:bg-purple-500 text-white px-1 md:px-3 py-1 md:py-2.5 rounded-md md:rounded-lg font-medium hover:bg-purple-700 dark:hover:bg-purple-600 transition-all duration-200 transform active:scale-95 text-xs md:text-sm"
-                  aria-label="Download all compressed images"
-                >
-                  <Download className="w-3 h-3 md:w-4 md:h-4" />
-                  <span>Download</span>
-                </button>
-              </div>
-              <button
-                onClick={onDownloadAsZip}
-                className="w-full flex items-center justify-center space-x-1 md:space-x-2 bg-indigo-600 dark:bg-indigo-500 text-white px-1 md:px-3 py-1 md:py-2.5 rounded-md md:rounded-lg font-medium hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-all duration-200 transform active:scale-95 text-xs md:text-sm"
-                aria-label="Download all as ZIP file"
-              >
-                <Archive className="w-3 h-3 md:w-4 md:h-4" />
-                <span>Download as ZIP</span>
-              </button>
-            </>
-          )}
-
-          {hasImages && (
-            <button
-              onClick={onClearAll}
-              disabled={isProcessing}
-              className="w-full flex items-center justify-center space-x-1 md:space-x-2 bg-red-600 dark:bg-red-500 text-white px-1 md:px-3 py-1 md:py-2.5 rounded-md md:rounded-lg font-medium hover:bg-red-700 dark:hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform active:scale-95 text-xs md:text-sm"
-              aria-label="Clear all images"
+          <div>
+            <label htmlFor="max-dimension-select" className="field-label">
+              Max dimension
+            </label>
+            <select
+              id="max-dimension-select"
+              value={maxWidth}
+              onChange={(e) => handleMaxWidthChange(parseInt(e.target.value))}
+              className="field"
             >
-              <Trash2 className="w-3 h-3 md:w-4 md:h-4" />
-              <span>Clear All</span>
-            </button>
-          )}
+              <option value={800}>800px</option>
+              <option value={1200}>1200px</option>
+              <option value={1920}>1920px</option>
+              <option value={2560}>2560px</option>
+            </select>
+          </div>
         </div>
-      </div>
-    </div>
+      </details>
+    </section>
   );
 };

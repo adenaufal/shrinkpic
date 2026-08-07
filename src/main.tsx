@@ -12,13 +12,19 @@ createRoot(document.getElementById('root')!).render(
       <ErrorBoundary>
         <App />
       </ErrorBoundary>
+      {/* Top-centre rather than bottom-right: on small screens the bottom of
+          the viewport belongs to the fixed action bar, and a toast stacked on
+          top of the Compress button hid the very control it reported on. */}
       <Toaster
-        position="bottom-right"
+        position="top-center"
         toastOptions={{
           duration: 3000,
           style: {
-            background: '#363636',
+            background: '#111827',
             color: '#fff',
+            borderRadius: '12px',
+            fontSize: '14px',
+            padding: '10px 14px',
           },
           success: {
             duration: 3000,

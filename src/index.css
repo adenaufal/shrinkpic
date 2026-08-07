@@ -5,7 +5,6 @@
 @import '@fontsource/inter/latin-400.css';
 @import '@fontsource/inter/latin-500.css';
 @import '@fontsource/inter/latin-600.css';
-@import '@fontsource/inter/latin-700.css';
 
 @tailwind base;
 @tailwind components;
@@ -14,11 +13,12 @@
 @layer base {
   html {
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-text-size-adjust: 100%;
     /* Paints before React mounts so the pre-hydration frame (and the sliver
        visible around #root before the app's own background utilities apply)
        matches the theme chosen by the blocking inline script in index.html,
        not the OS colour scheme. */
-    background-color: #f8fafc;
+    background-color: #f9fafb;
   }
 
   html.dark {
@@ -27,17 +27,14 @@
 
   /* Safety net for any interactive element that does not define its own
      focus-visible ring: keyboard focus must always be visible, even where a
-     component forgot to say so explicitly. Components that already set their
-     own focus-visible ring are unaffected — this just adds a consistent
-     outline underneath. */
+     component forgot to say so explicitly. */
   :focus-visible {
-    outline: 2px solid #3b82f6;
+    outline: 2px solid #2563eb;
     outline-offset: 2px;
   }
 }
 
-/* Respect the OS-level "reduce motion" preference: spinners, slide-ins and
-   fades all become instant instead of animated. */
+/* Respect the OS-level "reduce motion" preference. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -50,59 +47,78 @@
 }
 
 @layer components {
-  .slider {
-    background: #E5E7EB;
-  }
-  
-  .slider::-webkit-slider-thumb {
-    appearance: none;
-    height: 20px;
-    width: 20px;
-    border-radius: 50%;
-    background: #3B82F6;
-    cursor: pointer;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    transition: all 0.2s ease;
-  }
-  
-  .slider::-webkit-slider-thumb:hover {
-    background: #2563EB;
-    transform: scale(1.1);
-  }
-  
-  .slider::-moz-range-thumb {
-    height: 20px;
-    width: 20px;
-    border-radius: 50%;
-    background: #3B82F6;
-    cursor: pointer;
-    border: none;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  /* One card recipe for every raised surface: hairline border, flat fill, no
+     gradient and no drop shadow. Elevation is expressed by the border and the
+     page background behind it, so nested surfaces never stack shadows. */
+  .surface {
+    @apply rounded-2xl border border-gray-200 bg-white dark:border-dark-border dark:bg-dark-card;
   }
 
-  .slider::-moz-range-track {
-    background: #E5E7EB;
-    height: 8px;
-    border-radius: 4px;
-    border: none;
+  /* Every button in the app is 44px tall — the minimum comfortable touch
+     target — regardless of breakpoint. */
+  .btn {
+    @apply inline-flex min-h-[2.75rem] items-center justify-center gap-2 rounded-xl px-4 text-sm
+      font-medium transition-colors focus:outline-none focus-visible:ring-2
+      focus-visible:ring-brand-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed
+      disabled:opacity-50 dark:focus-visible:ring-offset-dark-bg;
+  }
+
+  .btn-primary {
+    @apply bg-brand-600 text-white hover:bg-brand-700 dark:bg-brand-500 dark:hover:bg-brand-400;
+  }
+
+  .btn-secondary {
+    @apply border border-gray-200 bg-white text-gray-700 hover:bg-gray-50
+      dark:border-dark-border dark:bg-transparent dark:text-gray-200 dark:hover:bg-gray-800;
+  }
+
+  .btn-ghost {
+    @apply text-gray-600 hover:bg-gray-100 hover:text-gray-900
+      dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-100;
+  }
+
+  .btn-danger {
+    @apply bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-500;
+  }
+
+  /* Square icon-only variant of .btn — same 44px box, no label padding. */
+  .btn-icon {
+    @apply w-11 shrink-0 px-0;
+  }
+
+  .field {
+    @apply min-h-[2.75rem] w-full rounded-xl border border-gray-200 bg-white px-3 text-sm
+      text-gray-900 transition-colors focus:outline-none focus-visible:ring-2
+      focus-visible:ring-brand-500 disabled:cursor-not-allowed disabled:opacity-50
+      dark:border-dark-border dark:bg-dark-bg dark:text-gray-100;
+  }
+
+  .field-label {
+    @apply mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300;
   }
 }
 
-/* Custom scrollbar */
+/* Scrollbars follow the theme instead of staying light-grey over a dark page. */
 ::-webkit-scrollbar {
-  width: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 3px;
+  width: 10px;
+  height: 10px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 3px;
+  background-color: #d1d5db;
+  border: 3px solid transparent;
+  background-clip: content-box;
+  border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
+  background-color: #9ca3af;
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+  background-color: #334155;
+}
+
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background-color: #475569;
 }
