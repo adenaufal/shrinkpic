@@ -67,7 +67,8 @@ for people who never read a README.
 
 ## Local development
 
-Requires Node 20+.
+Requires Node 22+ (the test suite's jsdom dependency requires it; `package.json`
+declares this via `engines`).
 
 ```bash
 git clone https://github.com/adenaufal/imagecompress.git

@@ -3,7 +3,7 @@
   publish = "dist"
 
 [build.environment]
-  NODE_VERSION = "20"
+  NODE_VERSION = "22"
 
 # Single-page app: every path resolves to the shell. Existing files (assets,
 # sw.js, manifest, robots.txt) are served before this rule is consulted.

@@ -14,6 +14,15 @@
 @layer base {
   html {
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    /* Paints before React mounts so the pre-hydration frame (and the sliver
+       visible around #root before the app's own background utilities apply)
+       matches the theme chosen by the blocking inline script in index.html,
+       not the OS colour scheme. */
+    background-color: #f8fafc;
+  }
+
+  html.dark {
+    background-color: #0f172a;
   }
 
   /* Safety net for any interactive element that does not define its own

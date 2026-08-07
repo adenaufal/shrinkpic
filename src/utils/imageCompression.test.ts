@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { computeTargetSize, finalizeResult, outputFilename, type EncodedImage } from './imageCompression';
+import {
+  computeTargetSize,
+  finalizeResult,
+  formatLabelFromMime,
+  outputFilename,
+  type EncodedImage,
+} from './imageCompression';
 
 describe('computeTargetSize', () => {
   it('never upscales an image smaller than the requested max dimension', () => {
@@ -67,7 +73,43 @@ describe('finalizeResult — keep original when the re-encode is not smaller', (
     expect(result.blob).not.toBe(file);
     expect(result.compressedSize).toBe(250);
     expect(result.compressionRatio).toBeCloseTo(75, 5);
+    expect(result.formatConversionSkipped).toBe(false);
     URL.revokeObjectURL(result.url);
+  });
+
+  it('flags a skipped format conversion when the kept original differs from the requested format', () => {
+    // encodedOf produces an image/jpeg blob — requesting a JPEG conversion of
+    // a PNG that does not actually shrink, so the original PNG is kept.
+    const file = new File([new Uint8Array(1000)], 'photo.png', { type: 'image/png' });
+    const result = finalizeResult(file, encodedOf(1400));
+
+    expect(result.alreadyOptimized).toBe(true);
+    expect(result.outputType).toBe('image/png');
+    expect(result.formatConversionSkipped).toBe(true);
+    expect(result.requestedOutputType).toBe('image/jpeg');
+    URL.revokeObjectURL(result.url);
+  });
+
+  it('does not flag a skipped conversion when the kept original already matches the requested format', () => {
+    const file = new File([new Uint8Array(1000)], 'photo.jpg', { type: 'image/jpeg' });
+    const result = finalizeResult(file, encodedOf(1400));
+
+    expect(result.alreadyOptimized).toBe(true);
+    expect(result.formatConversionSkipped).toBe(false);
+    expect(result.requestedOutputType).toBeUndefined();
+    URL.revokeObjectURL(result.url);
+  });
+});
+
+describe('formatLabelFromMime', () => {
+  it('maps known image MIME types to their human-readable format name', () => {
+    expect(formatLabelFromMime('image/jpeg')).toBe('JPEG');
+    expect(formatLabelFromMime('image/png')).toBe('PNG');
+    expect(formatLabelFromMime('image/webp')).toBe('WebP');
+  });
+
+  it('falls back to the MIME subtype, uppercased, for anything unmapped', () => {
+    expect(formatLabelFromMime('image/tiff')).toBe('TIFF');
   });
 });
 

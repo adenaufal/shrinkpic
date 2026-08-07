@@ -11,14 +11,30 @@ export default defineConfig({
     // "nothing leaves your device" claim.
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'favicon-32.png', 'apple-touch-icon.png', 'robots.txt'],
+      // favicon.svg / favicon-32.png / apple-touch-icon.png and the manifest
+      // icons are already picked up by workbox.globPatterns below (they're
+      // plain files in dist/ matching its svg/png extensions), so listing
+      // them here too used to precache each one twice. robots.txt is the
+      // only asset that genuinely needs the explicit include — .txt isn't in
+      // the glob's extension list.
+      includeAssets: ['robots.txt'],
+      // Manifest icons are already covered by the png/svg glob below; without
+      // this the plugin adds them a second time from manifest.icons.
+      includeManifestIcons: false,
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest,woff2}'],
+        // 'webmanifest' is deliberately absent: vite-plugin-pwa always adds
+        // manifest.webmanifest to the precache list itself, so matching it
+        // here too produced a duplicate entry.
+        globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
         // Only ever fetched by crawlers and link unfurlers — no reason to spend
         // 180 kB of the offline cache on it.
         globIgnores: ['**/og-image.png'],
         cleanupOutdatedCaches: true,
         navigateFallback: '/index.html',
+        // Direct navigations to these are real file requests, not app
+        // routes — without a denylist an installed SW serves the app shell
+        // instead of the actual robots.txt / sitemap.xml.
+        navigateFallbackDenylist: [/^\/robots\.txt$/, /^\/sitemap\.xml$/],
       },
       manifest: {
         name: 'ImageCompress — Free Private Image Compressor',

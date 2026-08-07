@@ -22,6 +22,16 @@ export interface CompressionResult {
   outputType: string;
   /** True when re-encoding produced a bigger file and the original was kept. */
   alreadyOptimized: boolean;
+  /**
+   * True when the original was kept (`alreadyOptimized`) AND the user had
+   * explicitly asked for a different output format — so the format they
+   * chose was never applied, not just the size optimisation. Distinct from
+   * plain `alreadyOptimized` so the UI can say so instead of staying silent.
+   */
+  formatConversionSkipped: boolean;
+  /** The MIME type that was requested but not applied, only set when
+   *  `formatConversionSkipped` is true. */
+  requestedOutputType?: string;
 }
 
 /** Raw encode output, before the "did this actually help?" decision. */
@@ -48,6 +58,21 @@ const EXTENSION_BY_MIME: Record<string, string> = {
   'image/avif': 'avif',
   'image/bmp': 'bmp',
 };
+
+const FORMAT_LABEL_BY_MIME: Record<string, string> = {
+  'image/jpeg': 'JPEG',
+  'image/jpg': 'JPEG',
+  'image/png': 'PNG',
+  'image/webp': 'WebP',
+  'image/gif': 'GIF',
+  'image/avif': 'AVIF',
+  'image/bmp': 'BMP',
+};
+
+/** Human-readable format name for a MIME type, e.g. for "kept the original
+ *  format" messaging. Falls back to the MIME subtype for anything unmapped. */
+export const formatLabelFromMime = (mimeType: string): string =>
+  FORMAT_LABEL_BY_MIME[mimeType] ?? mimeType.replace('image/', '').toUpperCase();
 
 /** Hard stop for a single image so one bad file can never hang the batch. */
 export const COMPRESSION_TIMEOUT_MS = 60_000;
@@ -122,6 +147,11 @@ export const finalizeResult = (file: File, encoded: EncodedImage): CompressionRe
   const blob: Blob = grewOrTied ? file : encoded.blob;
   const compressedSize = blob.size;
   const ratio = file.size > 0 ? ((file.size - compressedSize) / file.size) * 100 : 0;
+  const originalType = file.type || encoded.blob.type;
+  // encoded.blob.type is the format that was actually attempted, whether or
+  // not those bytes end up being kept — so this is true whenever the kept
+  // original's format differs from the format the user asked to convert to.
+  const formatConversionSkipped = grewOrTied && encoded.blob.type !== originalType;
 
   return {
     blob,
@@ -133,8 +163,10 @@ export const finalizeResult = (file: File, encoded: EncodedImage): CompressionRe
     originalHeight: encoded.originalHeight,
     outputWidth: grewOrTied ? encoded.originalWidth : encoded.outputWidth,
     outputHeight: grewOrTied ? encoded.originalHeight : encoded.outputHeight,
-    outputType: grewOrTied ? file.type || encoded.blob.type : encoded.blob.type,
+    outputType: grewOrTied ? originalType : encoded.blob.type,
     alreadyOptimized: grewOrTied,
+    formatConversionSkipped,
+    requestedOutputType: formatConversionSkipped ? encoded.blob.type : undefined,
   };
 };
 

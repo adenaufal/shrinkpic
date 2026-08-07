@@ -82,17 +82,14 @@ export const ComparisonSlider: React.FC<ComparisonSliderProps> = ({
         if (!open) onClose();
       }}
     >
-      <DialogPanel className="max-w-6xl" aria-describedby="comparison-subtitle">
+      <DialogPanel className="max-w-6xl">
         {/* Header */}
         <div className="flex items-center justify-between p-4 md:p-6 border-b border-gray-200 dark:border-dark-border">
           <div className="min-w-0">
             <DialogPrimitive.Title className="text-lg md:text-xl font-semibold text-gray-900 dark:text-gray-100 truncate">
               {fileName}
             </DialogPrimitive.Title>
-            <DialogPrimitive.Description
-              id="comparison-subtitle"
-              className="text-sm text-gray-600 dark:text-gray-400 mt-1"
-            >
+            <DialogPrimitive.Description className="text-sm text-gray-600 dark:text-gray-400 mt-1">
               Drag the slider, or focus it and use the arrow keys, to compare images
             </DialogPrimitive.Description>
           </div>
@@ -137,7 +134,8 @@ export const ComparisonSlider: React.FC<ComparisonSliderProps> = ({
           onPointerUp={stopDragging}
           onPointerCancel={stopDragging}
         >
-          {/* Before Image (Background) */}
+          {/* Before Image (Background) — the right (100 - position)% of this
+              layer shows through where the After layer is clipped away. */}
           <div className="absolute inset-0">
             <img
               src={beforeImage}
@@ -145,12 +143,10 @@ export const ComparisonSlider: React.FC<ComparisonSliderProps> = ({
               className="w-full h-full object-contain"
               draggable={false}
             />
-            <div className="absolute top-4 left-4 px-3 py-1.5 bg-black/70 text-white text-xs md:text-sm font-medium rounded-lg backdrop-blur-sm">
-              Original
-            </div>
           </div>
 
-          {/* After Image (Clipped) */}
+          {/* After Image (Clipped) — visible across the left `position`% of
+              the frame, painted on top of the Before layer. */}
           <div
             className="absolute inset-0 overflow-hidden"
             style={{ clipPath: `inset(0 ${100 - sliderPosition}% 0 0)` }}
@@ -161,9 +157,17 @@ export const ComparisonSlider: React.FC<ComparisonSliderProps> = ({
               className="w-full h-full object-contain"
               draggable={false}
             />
-            <div className="absolute top-4 right-4 px-3 py-1.5 bg-black/70 text-white text-xs md:text-sm font-medium rounded-lg backdrop-blur-sm">
-              Compressed
-            </div>
+          </div>
+
+          {/* Badges pinned outside the clipped layers so they stay visible
+              at every slider position, matching what each side actually
+              renders: Compressed on the left (After layer), Original on the
+              right (Before layer showing through). */}
+          <div className="absolute top-4 left-4 px-3 py-1.5 bg-black/70 text-white text-xs md:text-sm font-medium rounded-lg backdrop-blur-sm pointer-events-none">
+            Compressed
+          </div>
+          <div className="absolute top-4 right-4 px-3 py-1.5 bg-black/70 text-white text-xs md:text-sm font-medium rounded-lg backdrop-blur-sm pointer-events-none">
+            Original
           </div>
 
           {/* Slider Handle */}
@@ -181,7 +185,7 @@ export const ComparisonSlider: React.FC<ComparisonSliderProps> = ({
               aria-valuemin={0}
               aria-valuemax={100}
               aria-valuenow={Math.round(sliderPosition)}
-              aria-valuetext={`${Math.round(sliderPosition)}% original, ${100 - Math.round(sliderPosition)}% compressed`}
+              aria-valuetext={`${Math.round(sliderPosition)}% compressed, ${100 - Math.round(sliderPosition)}% original`}
               onKeyDown={handleKeyDown}
               className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 bg-white dark:bg-gray-800 rounded-full shadow-xl flex items-center justify-center border-2 border-gray-200 dark:border-gray-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
             >

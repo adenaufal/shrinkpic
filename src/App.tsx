@@ -215,6 +215,7 @@ function App() {
               originalSize: outcome.target.file.size,
               compressedSize: outcome.result?.compressedSize,
               compressionRatio: outcome.result?.compressionRatio,
+              outputType: outcome.result?.outputType,
             })),
             { quality, maxWidth, format: outputFormat }
           );

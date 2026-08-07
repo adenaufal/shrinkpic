@@ -3,6 +3,7 @@ import { History, Trash2, Clock, FileImage, X } from 'lucide-react';
 import { Dialog, DialogClose, DialogPanel } from './ui/dialog';
 import { HistorySession } from '../hooks/useCompressionHistory';
 import { formatFileSize } from '../utils/format';
+import { formatLabelFromMime } from '../utils/imageCompression';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 
 interface HistoryPanelProps {
@@ -43,7 +44,7 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogPanel className="max-w-3xl" aria-describedby="history-panel-subtitle">
+      <DialogPanel className="max-w-3xl">
         {/* Header */}
         <div className="flex items-center justify-between p-4 md:p-6 border-b border-gray-200 dark:border-dark-border">
           <div className="flex items-center gap-3">
@@ -54,10 +55,7 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
               <DialogPrimitive.Title className="text-lg md:text-xl font-semibold text-gray-900 dark:text-gray-100">
                 Compression History
               </DialogPrimitive.Title>
-              <DialogPrimitive.Description
-                id="history-panel-subtitle"
-                className="text-sm text-gray-600 dark:text-gray-400"
-              >
+              <DialogPrimitive.Description className="text-sm text-gray-600 dark:text-gray-400">
                 {history.length} session{history.length !== 1 ? 's' : ''}
               </DialogPrimitive.Description>
             </div>
@@ -106,6 +104,16 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
                         ((totalOriginalSize - totalCompressedSize) / totalOriginalSize) * 100
                       )
                     : 0;
+                // "Format" below records what was requested for the batch —
+                // any image whose re-encode came out larger keeps its
+                // original format instead, so the actual bytes on disk can
+                // differ from that setting. Surface it rather than implying
+                // every file matches.
+                const requestedFormatLabel = session.settings.format.toUpperCase();
+                const keptOriginalFormatCount = session.images.filter(
+                  (img) =>
+                    img.outputType && formatLabelFromMime(img.outputType) !== requestedFormatLabel
+                ).length;
 
                 return (
                   <div
@@ -144,6 +152,14 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
                         <div className="font-semibold text-gray-900 dark:text-gray-100 uppercase">
                           {session.settings.format}
                         </div>
+                        {keptOriginalFormatCount > 0 && (
+                          <div
+                            className="text-[11px] font-normal normal-case text-gray-500 dark:text-gray-400 mt-0.5"
+                            title="These files' re-encode was not smaller, so their original format was kept instead of converting."
+                          >
+                            {keptOriginalFormatCount} kept original
+                          </div>
+                        )}
                       </div>
 
                       <div>

@@ -10,6 +10,10 @@ export interface HistorySession {
     originalSize: number;
     compressedSize?: number;
     compressionRatio?: number;
+    /** Actual MIME type the file was saved as — may differ from
+     *  `settings.format` when a requested conversion was not smaller and the
+     *  original format was kept instead. */
+    outputType?: string;
   }[];
   settings: {
     quality: number;

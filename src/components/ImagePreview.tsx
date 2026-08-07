@@ -15,6 +15,7 @@ import {
   copyImageToClipboard,
   isClipboardSupported,
   outputFilename,
+  formatLabelFromMime,
 } from '../utils/imageCompression';
 import { formatFileSize } from '../utils/format';
 import { ComparisonSlider } from './ComparisonSlider';
@@ -181,7 +182,11 @@ const ImageCard: React.FC<ImageCardProps> = React.memo(function ImageCard({
               {image.result.alreadyOptimized ? (
                 <div className="flex items-center space-x-1 text-gray-600 dark:text-gray-400">
                   <ShieldCheck className="w-3 h-3" />
-                  <span className="text-xs font-medium">Already optimized — original kept</span>
+                  <span className="text-xs font-medium">
+                    {image.result.formatConversionSkipped && image.result.requestedOutputType
+                      ? `Kept original ${formatLabelFromMime(image.result.outputType)} — ${formatLabelFromMime(image.result.requestedOutputType)} would be larger`
+                      : 'Already optimized — original kept'}
+                  </span>
                 </div>
               ) : (
                 <div className="flex items-center space-x-1 text-green-600 dark:text-green-400">
