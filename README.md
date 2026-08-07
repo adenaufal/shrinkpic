@@ -51,7 +51,7 @@ install the app and go offline — it behaves identically.
 
 ## Screenshot
 
-![The ImageCompress workspace after a run: two photos compressed from 10.29 MB to 94.78 KB, showing the drop zone, the compression settings and the results grid](images/screenshot.png)
+![The ImageCompress workspace after a run: two photos compressed from 4.89 MB to 303.17 KB (94% smaller), showing the drop zone, the compression settings and the results grid](images/screenshot.png)
 
 ## Privacy
 
