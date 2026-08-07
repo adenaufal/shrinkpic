@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   X,
   RotateCw,
@@ -10,6 +10,9 @@ import {
   FlipHorizontal,
   FlipVertical,
 } from 'lucide-react';
+import toast from 'react-hot-toast';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
+import { Dialog, DialogClose, DialogPanel } from './ui/dialog';
 
 interface ImageEditorProps {
   file: File;
@@ -46,7 +49,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ file, onSave, onCancel
   }, [file]);
 
   // Draw image with all transformations
-  const drawImage = () => {
+  const drawImage = useCallback(() => {
     const canvas = canvasRef.current;
     const image = imageRef.current;
     if (!canvas || !image || !image.complete) return;
@@ -87,14 +90,14 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ file, onSave, onCancel
 
     // Restore context
     ctx.restore();
-  };
+  }, [rotation, flipH, flipV, filters]);
 
   // Redraw whenever any transformation changes
   useEffect(() => {
     if (imageRef.current?.complete) {
       drawImage();
     }
-  }, [rotation, flipH, flipV, filters]);
+  }, [drawImage]);
 
   const handleRotate = (degrees: number) => {
     setRotation((prev) => (prev + degrees + 360) % 360);
@@ -116,39 +119,59 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ file, onSave, onCancel
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    canvas.toBlob((blob) => {
-      if (!blob) return;
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          toast.error('Could not save the edit — the image may be too large for this device.');
+          return;
+        }
 
-      const extension = file.name.split('.').pop() || 'jpg';
-      const editedFile = new File([blob], file.name, {
-        type: blob.type,
-        lastModified: Date.now(),
-      });
+        // Name the file after the bytes we actually produced: `toBlob` silently
+        // falls back to PNG when it cannot encode the requested type.
+        const base = file.name.replace(/\.[^/.]+$/, '') || 'image';
+        const extension = blob.type === 'image/png' ? 'png' : blob.type === 'image/webp' ? 'webp' : 'jpg';
 
-      onSave(editedFile);
-    }, file.type || 'image/jpeg', 0.95);
+        onSave(
+          new File([blob], `${base}.${extension}`, {
+            type: blob.type,
+            lastModified: Date.now(),
+          })
+        );
+      },
+      file.type || 'image/jpeg',
+      0.95
+    );
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-      <div className="relative w-full max-w-6xl bg-white dark:bg-dark-card rounded-xl shadow-2xl overflow-hidden animate-slide-up max-h-[90vh] flex flex-col">
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onCancel();
+      }}
+    >
+      <DialogPanel className="max-w-6xl" aria-describedby="image-editor-subtitle">
         {/* Header */}
         <div className="flex items-center justify-between p-4 md:p-6 border-b border-gray-200 dark:border-dark-border">
           <div>
-            <h2 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-gray-100">
+            <DialogPrimitive.Title className="text-lg md:text-xl font-semibold text-gray-900 dark:text-gray-100">
               Edit Image
-            </h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            </DialogPrimitive.Title>
+            <DialogPrimitive.Description
+              id="image-editor-subtitle"
+              className="text-sm text-gray-600 dark:text-gray-400 mt-1"
+            >
               {file.name}
-            </p>
+            </DialogPrimitive.Description>
           </div>
-          <button
-            onClick={onCancel}
-            className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
-            aria-label="Close editor"
-          >
-            <X className="w-6 h-6" />
-          </button>
+          <DialogClose asChild>
+            <button
+              className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+              aria-label="Close editor"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </DialogClose>
         </div>
 
         {/* Tabs */}
@@ -261,11 +284,15 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ file, onSave, onCancel
               {activeTab === 'filters' && (
                 <div className="space-y-4">
                   <div>
-                    <label className="flex justify-between text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label
+                      htmlFor="filter-brightness"
+                      className="flex justify-between text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                    >
                       <span>Brightness</span>
                       <span>{filters.brightness}%</span>
                     </label>
                     <input
+                      id="filter-brightness"
                       type="range"
                       min="0"
                       max="200"
@@ -281,11 +308,15 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ file, onSave, onCancel
                   </div>
 
                   <div>
-                    <label className="flex justify-between text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label
+                      htmlFor="filter-contrast"
+                      className="flex justify-between text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                    >
                       <span>Contrast</span>
                       <span>{filters.contrast}%</span>
                     </label>
                     <input
+                      id="filter-contrast"
                       type="range"
                       min="0"
                       max="200"
@@ -301,11 +332,15 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ file, onSave, onCancel
                   </div>
 
                   <div>
-                    <label className="flex justify-between text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label
+                      htmlFor="filter-saturation"
+                      className="flex justify-between text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                    >
                       <span>Saturation</span>
                       <span>{filters.saturation}%</span>
                     </label>
                     <input
+                      id="filter-saturation"
                       type="range"
                       min="0"
                       max="200"
@@ -321,11 +356,15 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ file, onSave, onCancel
                   </div>
 
                   <div>
-                    <label className="flex justify-between text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label
+                      htmlFor="filter-blur"
+                      className="flex justify-between text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                    >
                       <span>Blur</span>
                       <span>{filters.blur}px</span>
                     </label>
                     <input
+                      id="filter-blur"
                       type="range"
                       min="0"
                       max="10"
@@ -372,7 +411,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ file, onSave, onCancel
             Apply Changes
           </button>
         </div>
-      </div>
-    </div>
+      </DialogPanel>
+    </Dialog>
   );
 };

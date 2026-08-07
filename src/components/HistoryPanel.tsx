@@ -1,19 +1,29 @@
 import React from 'react';
-import { History, Trash2, Clock, FileImage, Download, X } from 'lucide-react';
+import { History, Trash2, Clock, FileImage, X } from 'lucide-react';
+import { Dialog, DialogClose, DialogPanel } from './ui/dialog';
 import { HistorySession } from '../hooks/useCompressionHistory';
+import { formatFileSize } from '../utils/format';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
 
 interface HistoryPanelProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   history: HistorySession[];
   onDeleteSession: (id: string) => void;
   onClearHistory: () => void;
-  onClose: () => void;
 }
 
+/**
+ * Built on Radix Dialog rather than a hand-rolled overlay, so focus trap,
+ * focus restore, Escape-to-close, backdrop-click-to-close and body scroll
+ * lock all come for free instead of being reimplemented (and half-missed).
+ */
 export const HistoryPanel: React.FC<HistoryPanelProps> = ({
+  open,
+  onOpenChange,
   history,
   onDeleteSession,
   onClearHistory,
-  onClose,
 }) => {
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp);
@@ -31,17 +41,9 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
     return date.toLocaleDateString();
   };
 
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-      <div className="relative w-full max-w-3xl bg-white dark:bg-dark-card rounded-xl shadow-2xl overflow-hidden animate-slide-up max-h-[85vh] flex flex-col">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogPanel className="max-w-3xl" aria-describedby="history-panel-subtitle">
         {/* Header */}
         <div className="flex items-center justify-between p-4 md:p-6 border-b border-gray-200 dark:border-dark-border">
           <div className="flex items-center gap-3">
@@ -49,21 +51,25 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
               <History className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
-              <h2 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-gray-100">
+              <DialogPrimitive.Title className="text-lg md:text-xl font-semibold text-gray-900 dark:text-gray-100">
                 Compression History
-              </h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              </DialogPrimitive.Title>
+              <DialogPrimitive.Description
+                id="history-panel-subtitle"
+                className="text-sm text-gray-600 dark:text-gray-400"
+              >
                 {history.length} session{history.length !== 1 ? 's' : ''}
-              </p>
+              </DialogPrimitive.Description>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
-            aria-label="Close history"
-          >
-            <X className="w-6 h-6" />
-          </button>
+          <DialogClose asChild>
+            <button
+              className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+              aria-label="Close history"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </DialogClose>
         </div>
 
         {/* Content */}
@@ -87,13 +93,18 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
                   (sum, img) => sum + img.originalSize,
                   0
                 );
+                // Files that failed contribute their original size, so a
+                // session can never claim a saving it did not make.
                 const totalCompressedSize = session.images.reduce(
-                  (sum, img) => sum + (img.compressedSize || 0),
+                  (sum, img) => sum + (img.compressedSize ?? img.originalSize),
                   0
                 );
                 const overallRatio =
                   totalOriginalSize > 0
-                    ? ((totalOriginalSize - totalCompressedSize) / totalOriginalSize) * 100
+                    ? Math.max(
+                        0,
+                        ((totalOriginalSize - totalCompressedSize) / totalOriginalSize) * 100
+                      )
                     : 0;
 
                 return (
@@ -181,7 +192,7 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
             </p>
           </div>
         )}
-      </div>
-    </div>
+      </DialogPanel>
+    </Dialog>
   );
 };

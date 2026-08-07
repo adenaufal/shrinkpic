@@ -7,10 +7,36 @@ interface ImageToZip {
 }
 
 /**
- * Export multiple images as a ZIP file
- * @param images Array of images with blobs and filenames
- * @param zipFilename Name of the ZIP file (default: 'compressed-images.zip')
- * @returns Promise that resolves when ZIP is created and downloaded
+ * JSZip keys entries by path, so two inputs called `IMG_0001.jpg` used to
+ * silently overwrite each other while the UI still reported the full count.
+ */
+export const dedupeFilenames = (filenames: string[]): string[] => {
+  const used = new Set<string>();
+
+  return filenames.map((filename) => {
+    if (!used.has(filename)) {
+      used.add(filename);
+      return filename;
+    }
+
+    const dot = filename.lastIndexOf('.');
+    const base = dot > 0 ? filename.slice(0, dot) : filename;
+    const extension = dot > 0 ? filename.slice(dot) : '';
+
+    let counter = 2;
+    let candidate = `${base} (${counter})${extension}`;
+    while (used.has(candidate)) {
+      counter += 1;
+      candidate = `${base} (${counter})${extension}`;
+    }
+
+    used.add(candidate);
+    return candidate;
+  });
+};
+
+/**
+ * Export multiple images as a ZIP file.
  */
 export const exportToZip = async (
   images: ImageToZip[],
@@ -21,46 +47,21 @@ export const exportToZip = async (
   }
 
   const zip = new JSZip();
+  const names = dedupeFilenames(
+    images.map((image, index) => image.filename || `image-${index + 1}.jpg`)
+  );
 
-  // Add all images to the ZIP
   images.forEach((image, index) => {
-    // Use the original filename or generate one if not provided
-    const filename = image.filename || `image-${index + 1}.jpg`;
-    zip.file(filename, image.blob);
+    zip.file(names[index], image.blob);
   });
 
-  // Generate the ZIP file
   const content = await zip.generateAsync({
     type: 'blob',
     compression: 'DEFLATE',
     compressionOptions: {
-      level: 6, // Compression level (1-9, where 9 is max compression)
+      level: 6,
     },
   });
 
-  // Trigger download
   saveAs(content, zipFilename);
-};
-
-/**
- * Get the file extension from a filename
- */
-export const getFileExtension = (filename: string): string => {
-  const parts = filename.split('.');
-  return parts.length > 1 ? parts[parts.length - 1] : 'jpg';
-};
-
-/**
- * Change file extension to match the compression format
- */
-export const changeFileExtension = (
-  filename: string,
-  newExtension: string
-): string => {
-  const parts = filename.split('.');
-  if (parts.length > 1) {
-    parts[parts.length - 1] = newExtension;
-    return parts.join('.');
-  }
-  return `${filename}.${newExtension}`;
 };

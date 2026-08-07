@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 export interface KeyboardShortcut {
   key: string;
@@ -11,7 +11,16 @@ export interface KeyboardShortcut {
 }
 
 /**
- * Custom hook for managing keyboard shortcuts
+ * Custom hook for managing keyboard shortcuts.
+ *
+ * `shortcuts` is read through a ref that is refreshed on every render rather
+ * than being a `useEffect` dependency directly. App builds that array from an
+ * inline literal, so its identity changes on every render (including on
+ * every per-file progress tick); depending on it directly would tear down and
+ * rebuild the global `keydown` listener dozens of times per batch. The ref
+ * lets the effect depend on `enabled` alone and bind the listener exactly
+ * once, while `handleKeyDown` always sees the latest shortcut definitions.
+ *
  * @param shortcuts Array of keyboard shortcut configurations
  * @param enabled Whether shortcuts are enabled (default: true)
  */
@@ -19,6 +28,9 @@ export const useKeyboardShortcuts = (
   shortcuts: KeyboardShortcut[],
   enabled: boolean = true
 ) => {
+  const shortcutsRef = useRef(shortcuts);
+  shortcutsRef.current = shortcuts;
+
   useEffect(() => {
     if (!enabled) return;
 
@@ -33,8 +45,12 @@ export const useKeyboardShortcuts = (
         return;
       }
 
-      shortcuts.forEach((shortcut) => {
-        const ctrlMatch = shortcut.ctrl ? event.ctrlKey || event.metaKey : true;
+      shortcutsRef.current.forEach((shortcut) => {
+        // An unspecified modifier means "must NOT be held". Treating it as
+        // "don't care" made plain Delete fire on Ctrl+Delete too, wiping the
+        // whole queue by accident.
+        const modifierHeld = event.ctrlKey || event.metaKey;
+        const ctrlMatch = shortcut.ctrl ? modifierHeld : !modifierHeld;
         const shiftMatch = shortcut.shift ? event.shiftKey : !event.shiftKey;
         const altMatch = shortcut.alt ? event.altKey : !event.altKey;
         const keyMatch = event.key.toLowerCase() === shortcut.key.toLowerCase();
@@ -48,23 +64,5 @@ export const useKeyboardShortcuts = (
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [shortcuts, enabled]);
-};
-
-/**
- * Get a formatted string representation of a keyboard shortcut
- */
-export const formatShortcut = (shortcut: KeyboardShortcut): string => {
-  const parts: string[] = [];
-
-  if (shortcut.ctrl) {
-    // Use Cmd symbol on Mac, Ctrl on others
-    parts.push(navigator.platform.includes('Mac') ? '⌘' : 'Ctrl');
-  }
-  if (shortcut.shift) parts.push('Shift');
-  if (shortcut.alt) parts.push('Alt');
-
-  parts.push(shortcut.key.toUpperCase());
-
-  return parts.join('+');
+  }, [enabled]);
 };

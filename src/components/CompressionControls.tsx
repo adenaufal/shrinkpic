@@ -1,20 +1,21 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Settings, Zap, Download, Copy, Trash2, Archive } from 'lucide-react';
-import { COMPRESSION_PRESETS, getPresetById } from '../utils/presets';
+import { COMPRESSION_PRESETS } from '../utils/presets';
+import { isFormatSupported, type OutputFormat } from '../utils/imageCompression';
 
 interface CompressionControlsProps {
   quality: number;
   onQualityChange: (quality: number) => void;
   maxWidth: number;
   onMaxWidthChange: (width: number) => void;
-  format: 'jpeg' | 'png' | 'webp';
-  onFormatChange: (format: 'jpeg' | 'png' | 'webp') => void;
+  format: OutputFormat;
+  onFormatChange: (format: OutputFormat) => void;
   selectedPreset: string;
   onPresetChange: (presetId: string) => void;
   onCompress: () => void;
   onDownloadAll: () => void;
   onDownloadAsZip: () => void;
-  onCopyAll: () => void;
+  onCopyImage: () => void;
   onClearAll: () => void;
   isProcessing: boolean;
   hasImages: boolean;
@@ -33,54 +34,57 @@ export const CompressionControls: React.FC<CompressionControlsProps> = ({
   onCompress,
   onDownloadAll,
   onDownloadAsZip,
-  onCopyAll,
+  onCopyImage,
   onClearAll,
   isProcessing,
   hasImages,
   hasResults,
 }) => {
-  // Apply preset settings when preset changes
-  useEffect(() => {
-    if (selectedPreset !== 'custom') {
-      const preset = getPresetById(selectedPreset);
-      if (preset) {
-        onQualityChange(preset.quality);
-        onMaxWidthChange(preset.maxWidth);
-        onFormatChange(preset.format);
-      }
-    }
-  }, [selectedPreset]); // Only run when preset changes
-
-  // Detect if user has customized settings
-  const handleSettingChange = (type: 'quality' | 'maxWidth' | 'format', value: any) => {
-    if (type === 'quality') onQualityChange(value);
-    if (type === 'maxWidth') onMaxWidthChange(value);
-    if (type === 'format') onFormatChange(value);
-
-    // Switch to custom if user changes settings manually
+  // Preset resolution lives in App: this component only reports what the user
+  // touched. Applying presets from an effect in here ran twice (the controls
+  // are mounted for both breakpoints) and could clobber in-flight settings.
+  const markCustom = () => {
     if (selectedPreset !== 'custom') {
       onPresetChange('custom');
     }
+  };
+
+  const handleQualityChange = (value: number) => {
+    onQualityChange(value);
+    markCustom();
+  };
+
+  const handleMaxWidthChange = (value: number) => {
+    onMaxWidthChange(value);
+    markCustom();
+  };
+
+  const handleFormatChange = (value: OutputFormat) => {
+    onFormatChange(value);
+    markCustom();
   };
 
   return (
     <div className="bg-white dark:bg-dark-card rounded-xl p-2 md:p-6 shadow-lg border border-gray-100 dark:border-dark-border transition-colors duration-300">
       <div className="flex items-center space-x-1.5 mb-2 md:mb-6">
         <Settings className="w-4 h-4 md:w-5 md:h-5 text-blue-600 dark:text-blue-400" />
-        <h3 className="text-sm md:text-lg font-semibold text-gray-900 dark:text-gray-100">Compression Settings</h3>
+        <h2 className="text-sm md:text-lg font-semibold text-gray-900 dark:text-gray-100">Compression Settings</h2>
       </div>
 
       <div className="space-y-2 md:space-y-6">
         {/* Preset Selector */}
         <div>
-          <label className="block text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 md:mb-3">
+          <label
+            htmlFor="preset-select"
+            className="block text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 md:mb-3"
+          >
             Quick Presets
           </label>
           <select
+            id="preset-select"
             value={selectedPreset}
             onChange={(e) => onPresetChange(e.target.value)}
             className="w-full p-1.5 md:p-3 text-xs md:text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md md:rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            aria-label="Select compression preset"
           >
             {COMPRESSION_PRESETS.map((preset) => (
               <option key={preset.id} value={preset.id}>
@@ -91,19 +95,28 @@ export const CompressionControls: React.FC<CompressionControlsProps> = ({
         </div>
 
         <div>
-          <label className="block text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 md:mb-3">
+          <label
+            htmlFor="quality-range"
+            className="block text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 md:mb-3"
+          >
             Quality: {Math.round(quality * 100)}%
+            {format === 'png' && (
+              <span className="ml-1 font-normal text-gray-500 dark:text-gray-400">
+                (PNG is lossless — quality has no effect)
+              </span>
+            )}
           </label>
           <div className="relative">
             <input
+              id="quality-range"
               type="range"
               min="0.1"
               max="1"
               step="0.05"
               value={quality}
-              onChange={(e) => handleSettingChange('quality', parseFloat(e.target.value))}
-              className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
-              aria-label={`Quality: ${Math.round(quality * 100)}%`}
+              disabled={format === 'png'}
+              onChange={(e) => handleQualityChange(parseFloat(e.target.value))}
+              className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer slider disabled:opacity-50 disabled:cursor-not-allowed"
             />
             <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
               <span className="text-xs">High compression</span>
@@ -113,14 +126,17 @@ export const CompressionControls: React.FC<CompressionControlsProps> = ({
         </div>
 
         <div>
-          <label className="block text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 md:mb-3">
-            Max Width: {maxWidth}px
+          <label
+            htmlFor="max-dimension-select"
+            className="block text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 md:mb-3"
+          >
+            Max Dimension: {maxWidth}px
           </label>
           <select
+            id="max-dimension-select"
             value={maxWidth}
-            onChange={(e) => handleSettingChange('maxWidth', parseInt(e.target.value))}
+            onChange={(e) => handleMaxWidthChange(parseInt(e.target.value))}
             className="w-full p-1.5 md:p-3 text-xs md:text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md md:rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            aria-label={`Max width: ${maxWidth} pixels`}
           >
             <option value={800}>800px (Small)</option>
             <option value={1200}>1200px (Medium)</option>
@@ -130,26 +146,39 @@ export const CompressionControls: React.FC<CompressionControlsProps> = ({
         </div>
 
         <div>
-          <label className="block text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 md:mb-3">
+          <span
+            id="format-group-label"
+            className="block text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 md:mb-3"
+          >
             Output Format
-          </label>
-          <div className="grid grid-cols-3 gap-0.5 md:gap-2">
-            {(['jpeg', 'png', 'webp'] as const).map((fmt) => (
-              <button
-                key={fmt}
-                onClick={() => handleSettingChange('format', fmt)}
-                className={`p-1 md:p-3 text-xs md:text-sm font-medium rounded-md md:rounded-lg transition-all duration-200 transform active:scale-95 ${
-                  format === fmt
-                    ? 'bg-blue-600 dark:bg-blue-500 text-white'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                }`}
-                aria-label={`Select ${fmt.toUpperCase()} format`}
-                aria-pressed={format === fmt}
-              >
-                {fmt.toUpperCase()}
-              </button>
-            ))}
+          </span>
+          <div className="grid grid-cols-3 gap-0.5 md:gap-2" role="group" aria-labelledby="format-group-label">
+            {(['jpeg', 'png', 'webp'] as const).map((fmt) => {
+              const supported = isFormatSupported(fmt);
+              return (
+                <button
+                  key={fmt}
+                  onClick={() => handleFormatChange(fmt)}
+                  disabled={!supported}
+                  className={`p-1 md:p-3 text-xs md:text-sm font-medium rounded-md md:rounded-lg transition-all duration-200 transform active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${
+                    format === fmt
+                      ? 'bg-blue-600 dark:bg-blue-500 text-white'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                  }`}
+                  aria-label={`Select ${fmt.toUpperCase()} format`}
+                  aria-pressed={format === fmt}
+                  title={supported ? undefined : `This browser cannot encode ${fmt.toUpperCase()}`}
+                >
+                  {fmt.toUpperCase()}
+                </button>
+              );
+            })}
           </div>
+          {format === 'png' && (
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              PNG is lossless — photos usually come out larger. The original is kept when that happens.
+            </p>
+          )}
         </div>
 
         <div className="space-y-1 md:space-y-3 pt-1.5 md:pt-4">
@@ -169,9 +198,10 @@ export const CompressionControls: React.FC<CompressionControlsProps> = ({
             <>
               <div className="grid grid-cols-2 gap-0.5 md:gap-2">
                 <button
-                  onClick={onCopyAll}
+                  onClick={onCopyImage}
                   className="flex items-center justify-center space-x-0.5 bg-green-600 dark:bg-green-500 text-white px-1 md:px-3 py-1 md:py-2.5 rounded-md md:rounded-lg font-medium hover:bg-green-700 dark:hover:bg-green-600 transition-all duration-200 transform active:scale-95 text-xs md:text-sm"
-                  aria-label="Copy all compressed images"
+                  aria-label="Copy the first compressed image to the clipboard"
+                  title="The clipboard holds one image at a time"
                 >
                   <Copy className="w-3 h-3 md:w-4 md:h-4" />
                   <span>Copy</span>
@@ -199,7 +229,8 @@ export const CompressionControls: React.FC<CompressionControlsProps> = ({
           {hasImages && (
             <button
               onClick={onClearAll}
-              className="w-full flex items-center justify-center space-x-1 md:space-x-2 bg-red-600 dark:bg-red-500 text-white px-1 md:px-3 py-1 md:py-2.5 rounded-md md:rounded-lg font-medium hover:bg-red-700 dark:hover:bg-red-600 transition-all duration-200 transform active:scale-95 text-xs md:text-sm"
+              disabled={isProcessing}
+              className="w-full flex items-center justify-center space-x-1 md:space-x-2 bg-red-600 dark:bg-red-500 text-white px-1 md:px-3 py-1 md:py-2.5 rounded-md md:rounded-lg font-medium hover:bg-red-700 dark:hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform active:scale-95 text-xs md:text-sm"
               aria-label="Clear all images"
             >
               <Trash2 className="w-3 h-3 md:w-4 md:h-4" />

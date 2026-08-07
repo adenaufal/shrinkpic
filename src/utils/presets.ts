@@ -41,8 +41,11 @@ export const COMPRESSION_PRESETS: CompressionPreset[] = [
     name: 'Print Quality',
     description: 'High quality for printing',
     quality: 0.95,
+    // PNG re-encodes of photographic sources are routinely several times
+    // LARGER than the input, which made this preset the worst of the set.
+    // Lossless PNG is still one click away in the format switcher.
+    format: 'jpeg',
     maxWidth: 2560,
-    format: 'png',
     icon: '🖨️',
   },
   {

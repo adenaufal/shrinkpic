@@ -46,68 +46,12 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
           className={`h-full ${variantClasses[variant]} transition-all duration-300 ease-out rounded-full`}
           style={{ width: `${clampedProgress}%` }}
           role="progressbar"
+          aria-label="Compression progress"
           aria-valuenow={clampedProgress}
           aria-valuemin={0}
           aria-valuemax={100}
         />
       </div>
-    </div>
-  );
-};
-
-// Circular progress bar variant
-interface CircularProgressProps {
-  progress: number; // 0-100
-  size?: number;
-  strokeWidth?: number;
-  showPercentage?: boolean;
-  className?: string;
-}
-
-export const CircularProgress: React.FC<CircularProgressProps> = ({
-  progress,
-  size = 48,
-  strokeWidth = 4,
-  showPercentage = true,
-  className = '',
-}) => {
-  const clampedProgress = Math.min(Math.max(progress, 0), 100);
-  const radius = (size - strokeWidth) / 2;
-  const circumference = radius * 2 * Math.PI;
-  const offset = circumference - (clampedProgress / 100) * circumference;
-
-  return (
-    <div className={`relative inline-flex items-center justify-center ${className}`}>
-      <svg width={size} height={size} className="transform -rotate-90">
-        {/* Background circle */}
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          stroke="currentColor"
-          strokeWidth={strokeWidth}
-          fill="none"
-          className="text-gray-200 dark:text-gray-700"
-        />
-        {/* Progress circle */}
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          stroke="currentColor"
-          strokeWidth={strokeWidth}
-          fill="none"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          strokeLinecap="round"
-          className="text-blue-500 transition-all duration-300 ease-out"
-        />
-      </svg>
-      {showPercentage && (
-        <span className="absolute text-xs font-semibold text-gray-900 dark:text-gray-100">
-          {Math.round(clampedProgress)}%
-        </span>
-      )}
     </div>
   );
 };

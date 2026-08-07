@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
+import { safeStorage } from '../utils/safeStorage';
+import { createId } from '../utils/format';
 
 export interface HistorySession {
   id: string;
@@ -19,40 +21,37 @@ export interface HistorySession {
 const STORAGE_KEY = 'imagecompress_history';
 const MAX_HISTORY_ITEMS = 20;
 
+const loadHistory = (): HistorySession[] => {
+  const stored = safeStorage.getItem(STORAGE_KEY);
+  if (!stored) return [];
+
+  try {
+    const parsed = JSON.parse(stored);
+    return Array.isArray(parsed) ? (parsed as HistorySession[]) : [];
+  } catch (error) {
+    console.error('Failed to parse compression history:', error);
+    return [];
+  }
+};
+
 export const useCompressionHistory = () => {
-  const [history, setHistory] = useState<HistorySession[]>([]);
+  // Loading in the initialiser (rather than a mount effect) means the save
+  // effect can never run before the load has landed and persist an empty array
+  // over the user's real history.
+  const [history, setHistory] = useState<HistorySession[]>(loadHistory);
 
-  // Load history from localStorage on mount
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored) as HistorySession[];
-        setHistory(parsed);
-      }
-    } catch (error) {
-      console.error('Failed to load history:', error);
-    }
-  }, []);
-
-  // Save history to localStorage whenever it changes
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
-    } catch (error) {
-      console.error('Failed to save history:', error);
-    }
+    safeStorage.setItem(STORAGE_KEY, JSON.stringify(history));
   }, [history]);
 
+  /**
+   * Takes already-resolved per-file numbers. Passing component state here is
+   * what made every stored session read "100% saved" — the state had not been
+   * written back yet at call time.
+   */
   const addSession = useCallback(
     (
-      images: Array<{
-        file: File;
-        result?: {
-          compressedSize: number;
-          compressionRatio: number;
-        };
-      }>,
+      images: HistorySession['images'],
       settings: {
         quality: number;
         maxWidth: number;
@@ -60,14 +59,9 @@ export const useCompressionHistory = () => {
       }
     ) => {
       const session: HistorySession = {
-        id: `${Date.now()}-${Math.random()}`,
+        id: createId(),
         timestamp: Date.now(),
-        images: images.map((img) => ({
-          fileName: img.file.name,
-          originalSize: img.file.size,
-          compressedSize: img.result?.compressedSize,
-          compressionRatio: img.result?.compressionRatio,
-        })),
+        images,
         settings,
       };
 
@@ -90,18 +84,10 @@ export const useCompressionHistory = () => {
     setHistory([]);
   }, []);
 
-  const getSession = useCallback(
-    (id: string) => {
-      return history.find((session) => session.id === id);
-    },
-    [history]
-  );
-
   return {
     history,
     addSession,
     deleteSession,
     clearHistory,
-    getSession,
   };
 };

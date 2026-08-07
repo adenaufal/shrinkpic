@@ -1,10 +1,42 @@
+/* Self-hosted so the app makes zero third-party requests — a webfont CDN would
+   contradict the privacy claim on the very first page load. Latin subset only:
+   the full set pulls in seven scripts in two formats, which the service worker
+   would then precache. */
+@import '@fontsource/inter/latin-400.css';
+@import '@fontsource/inter/latin-500.css';
+@import '@fontsource/inter/latin-600.css';
+@import '@fontsource/inter/latin-700.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
-  * {
-    font-family: 'Satoshi', system-ui, -apple-system, sans-serif;
+  html {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  /* Safety net for any interactive element that does not define its own
+     focus-visible ring: keyboard focus must always be visible, even where a
+     component forgot to say so explicitly. Components that already set their
+     own focus-visible ring are unaffected — this just adds a consistent
+     outline underneath. */
+  :focus-visible {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+  }
+}
+
+/* Respect the OS-level "reduce motion" preference: spinners, slide-ins and
+   fades all become instant instead of animated. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
