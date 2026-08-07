@@ -18,6 +18,12 @@ interface ImageEditorProps {
   file: File;
   onSave: (editedFile: File) => void;
   onCancel: () => void;
+  /**
+   * Locks the "Apply changes" action — set while a batch is running, because
+   * applying an edit to a file that is mid-compression lets the in-flight job
+   * write its pre-edit result back onto the edited image.
+   */
+  disabled?: boolean;
 }
 
 interface Filters {
@@ -27,7 +33,12 @@ interface Filters {
   blur: number;
 }
 
-export const ImageEditor: React.FC<ImageEditorProps> = ({ file, onSave, onCancel }) => {
+export const ImageEditor: React.FC<ImageEditorProps> = ({
+  file,
+  onSave,
+  onCancel,
+  disabled = false,
+}) => {
   const [imageUrl, setImageUrl] = useState<string>('');
   const [rotation, setRotation] = useState(0);
   const [flipH, setFlipH] = useState(false);
@@ -117,7 +128,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ file, onSave, onCancel
 
   const handleSave = async () => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas || disabled) return;
 
     canvas.toBlob(
       (blob) => {
@@ -150,26 +161,23 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ file, onSave, onCancel
         if (!open) onCancel();
       }}
     >
-      <DialogPanel className="max-w-6xl" aria-describedby="image-editor-subtitle">
+      <DialogPanel className="max-w-6xl">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 md:p-6 border-b border-gray-200 dark:border-dark-border">
-          <div>
-            <DialogPrimitive.Title className="text-lg md:text-xl font-semibold text-gray-900 dark:text-gray-100">
-              Edit Image
+        <div className="flex items-start justify-between gap-4 border-b border-gray-200 p-4 dark:border-dark-border md:p-6">
+          <div className="min-w-0">
+            <DialogPrimitive.Title className="text-base font-semibold text-gray-900 dark:text-gray-100">
+              Edit image
             </DialogPrimitive.Title>
-            <DialogPrimitive.Description
-              id="image-editor-subtitle"
-              className="text-sm text-gray-600 dark:text-gray-400 mt-1"
-            >
+            <DialogPrimitive.Description className="mt-0.5 truncate text-sm text-gray-500 dark:text-gray-400">
               {file.name}
             </DialogPrimitive.Description>
           </div>
           <DialogClose asChild>
             <button
-              className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+              className="btn btn-ghost btn-icon -mr-2"
               aria-label="Close editor"
             >
-              <X className="w-6 h-6" />
+              <X className="h-5 w-5" aria-hidden="true" />
             </button>
           </DialogClose>
         </div>
@@ -180,7 +188,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ file, onSave, onCancel
             onClick={() => setActiveTab('rotate')}
             className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'rotate'
-                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                ? 'border-brand-500 text-brand-600 dark:text-brand-400'
                 : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
             }`}
           >
@@ -191,7 +199,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ file, onSave, onCancel
             onClick={() => setActiveTab('filters')}
             className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'filters'
-                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                ? 'border-brand-500 text-brand-600 dark:text-brand-400'
                 : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
             }`}
           >
@@ -205,7 +213,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ file, onSave, onCancel
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Preview */}
             <div className="lg:col-span-2">
-              <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 flex items-center justify-center min-h-[400px]">
+              <div className="flex min-h-[14rem] items-center justify-center rounded-xl bg-gray-100 p-4 dark:bg-gray-800 md:min-h-[24rem]">
                 <img
                   ref={imageRef}
                   src={imageUrl}
@@ -215,7 +223,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ file, onSave, onCancel
                 />
                 <canvas
                   ref={canvasRef}
-                  className="max-w-full max-h-[500px] object-contain"
+                  className="max-h-[40vh] max-w-full object-contain md:max-h-[31rem]"
                 />
               </div>
             </div>
@@ -231,14 +239,14 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ file, onSave, onCancel
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         onClick={() => handleRotate(-90)}
-                        className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors"
+                        className="btn btn-secondary"
                       >
                         <RotateCcw className="w-4 h-4" />
                         <span className="text-sm">Left</span>
                       </button>
                       <button
                         onClick={() => handleRotate(90)}
-                        className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors"
+                        className="btn btn-secondary"
                       >
                         <RotateCw className="w-4 h-4" />
                         <span className="text-sm">Right</span>
@@ -256,22 +264,16 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ file, onSave, onCancel
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         onClick={() => setFlipH(!flipH)}
-                        className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                          flipH
-                            ? 'bg-blue-500 text-white'
-                            : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                        }`}
+                        aria-pressed={flipH}
+                        className={`btn ${flipH ? 'btn-primary' : 'btn-secondary'}`}
                       >
                         <FlipHorizontal className="w-4 h-4" />
                         <span className="text-sm">Horizontal</span>
                       </button>
                       <button
                         onClick={() => setFlipV(!flipV)}
-                        className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                          flipV
-                            ? 'bg-blue-500 text-white'
-                            : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                        }`}
+                        aria-pressed={flipV}
+                        className={`btn ${flipV ? 'btn-primary' : 'btn-secondary'}`}
                       >
                         <FlipVertical className="w-4 h-4" />
                         <span className="text-sm">Vertical</span>
@@ -303,7 +305,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ file, onSave, onCancel
                           brightness: Number(e.target.value),
                         }))
                       }
-                      className="w-full"
+                      className="w-full cursor-pointer accent-brand-600 dark:accent-brand-500"
                     />
                   </div>
 
@@ -327,7 +329,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ file, onSave, onCancel
                           contrast: Number(e.target.value),
                         }))
                       }
-                      className="w-full"
+                      className="w-full cursor-pointer accent-brand-600 dark:accent-brand-500"
                     />
                   </div>
 
@@ -351,7 +353,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ file, onSave, onCancel
                           saturation: Number(e.target.value),
                         }))
                       }
-                      className="w-full"
+                      className="w-full cursor-pointer accent-brand-600 dark:accent-brand-500"
                     />
                   </div>
 
@@ -376,7 +378,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ file, onSave, onCancel
                           blur: Number(e.target.value),
                         }))
                       }
-                      className="w-full"
+                      className="w-full cursor-pointer accent-brand-600 dark:accent-brand-500"
                     />
                   </div>
                 </div>
@@ -385,10 +387,10 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ file, onSave, onCancel
               <div className="pt-4 border-t border-gray-200 dark:border-dark-border">
                 <button
                   onClick={handleReset}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                  className="btn btn-secondary w-full"
                 >
                   <RefreshCw className="w-4 h-4" />
-                  Reset All
+                  Reset all
                 </button>
               </div>
             </div>
@@ -396,19 +398,21 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ file, onSave, onCancel
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 p-4 md:p-6 border-t border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-gray-900/50">
+        <div className="flex items-center justify-end gap-2 border-t border-gray-200 p-4 dark:border-dark-border md:px-6">
           <button
             onClick={onCancel}
-            className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-lg transition-colors"
+            className="btn btn-ghost"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
-            className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            disabled={disabled}
+            title={disabled ? 'Available once compression finishes' : undefined}
+            className="btn btn-primary"
           >
             <Check className="w-4 h-4" />
-            Apply Changes
+            Apply changes
           </button>
         </div>
       </DialogPanel>

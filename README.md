@@ -51,7 +51,7 @@ install the app and go offline — it behaves identically.
 
 ## Screenshot
 
-![The ImageCompress workspace: drop zone on the left, compression settings on the right](images/screenshot.png)
+![The ImageCompress workspace after a run: two photos compressed from 4.89 MB to 303.17 KB (94% smaller), showing the drop zone, the compression settings and the results grid](images/screenshot.png)
 
 ## Privacy
 
@@ -67,7 +67,8 @@ for people who never read a README.
 
 ## Local development
 
-Requires Node 20+.
+Requires Node 22+ (the test suite's jsdom dependency requires it; `package.json`
+declares this via `engines`).
 
 ```bash
 git clone https://github.com/adenaufal/imagecompress.git

@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from './ui/dial
 const REPO_URL = 'https://github.com/adenaufal/imagecompress';
 
 const linkClass =
-  'rounded text-gray-600 underline-offset-2 transition-colors hover:text-blue-600 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-gray-400 dark:hover:text-blue-400';
+  'rounded text-gray-500 underline-offset-2 transition-colors hover:text-brand-600 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-gray-400 dark:hover:text-brand-400';
 
 const sectionTitleClass = 'mt-5 text-sm font-semibold text-gray-900 dark:text-gray-100';
 const bodyClass = 'mt-1.5 text-sm leading-relaxed text-gray-600 dark:text-gray-400';
@@ -23,29 +23,31 @@ export const SiteFooter: React.FC = () => {
 
   return (
     <>
-      <footer className="mt-16 border-t border-gray-200 py-8 text-center text-sm text-gray-500 dark:border-dark-border dark:text-gray-400">
-        <nav className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
-          <button type="button" className={linkClass} onClick={() => setPanel('privacy')}>
-            Privacy
-          </button>
-          <button type="button" className={linkClass} onClick={() => setPanel('about')}>
-            About
-          </button>
-          <a
-            href={REPO_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`${linkClass} inline-flex items-center gap-1.5`}
-          >
-            <Github className="w-4 h-4" aria-hidden="true" />
-            GitHub
-          </a>
-        </nav>
+      <footer className="mt-12 border-t border-gray-200 dark:border-dark-border">
+        <div className="mx-auto flex max-w-5xl flex-col items-center gap-3 px-4 py-6 text-sm text-gray-500 dark:text-gray-400 sm:flex-row sm:justify-between">
+          <p className="text-center sm:text-left">
+            &copy; {new Date().getFullYear()} ImageCompress &middot; MIT licensed &middot; every
+            image is processed on your device
+          </p>
 
-        <p className="mt-4">
-          &copy; {new Date().getFullYear()} ImageCompress &middot; MIT licensed &middot; every image
-          is processed on your device
-        </p>
+          <nav className="flex items-center gap-4">
+            <button type="button" className={linkClass} onClick={() => setPanel('privacy')}>
+              Privacy
+            </button>
+            <button type="button" className={linkClass} onClick={() => setPanel('about')}>
+              About
+            </button>
+            <a
+              href={REPO_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`${linkClass} inline-flex items-center gap-1.5`}
+            >
+              <Github className="h-4 w-4" aria-hidden="true" />
+              GitHub
+            </a>
+          </nav>
+        </div>
       </footer>
 
       <Dialog open={panel === 'privacy'} onOpenChange={(open) => !open && setPanel(null)}>
@@ -87,7 +89,7 @@ export const SiteFooter: React.FC = () => {
               href={REPO_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-600 underline underline-offset-2 dark:text-blue-400"
+              className="text-brand-600 underline underline-offset-2 dark:text-brand-400"
             >
               github.com/adenaufal/imagecompress
             </a>
@@ -125,7 +127,7 @@ export const SiteFooter: React.FC = () => {
               href="https://github.com/adenaufal"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-600 underline underline-offset-2 dark:text-blue-400"
+              className="text-brand-600 underline underline-offset-2 dark:text-brand-400"
             >
               adenaufal
             </a>
@@ -134,7 +136,7 @@ export const SiteFooter: React.FC = () => {
               href={REPO_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-600 underline underline-offset-2 dark:text-blue-400"
+              className="text-brand-600 underline underline-offset-2 dark:text-brand-400"
             >
               GitHub
             </a>

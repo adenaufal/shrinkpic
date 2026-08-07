@@ -18,7 +18,7 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
     <!-- Browser chrome matches the active theme -->
-    <meta name="theme-color" content="#f8fafc" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#f9fafb" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)" />
     <meta name="color-scheme" content="light dark" />
     <meta name="apple-mobile-web-app-title" content="ImageCompress" />
@@ -71,6 +71,7 @@
             (stored !== 'light' &&
               window.matchMedia('(prefers-color-scheme: dark)').matches);
           if (dark) document.documentElement.classList.add('dark');
+          document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
         } catch (e) {
           /* storage or matchMedia unavailable — fall back to light */
         }
