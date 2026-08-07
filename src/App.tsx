@@ -18,6 +18,7 @@ import {
 import { formatFileSize, createId } from './utils/format';
 import { getDefaultPreset, getPresetById } from './utils/presets';
 import { validateFiles } from './utils/fileValidation';
+import { isSameQueueEntry, updateQueueEntry } from './utils/queue';
 import { getCompressionConcurrency, runWithConcurrency } from './utils/concurrency';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useCompressionHistory } from './hooks/useCompressionHistory';
@@ -33,6 +34,9 @@ function App() {
   const [selectedPreset, setSelectedPreset] = useState(defaultPreset.id);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  // The queue's modals (editor, comparison) live inside ImagePreview; it
+  // reports them up so the global shortcuts can stand down while one is open.
+  const [previewModalOpen, setPreviewModalOpen] = useState(false);
   // A single visually-hidden live region for batch-level status. Per-card
   // progress bars are `aria-hidden` — six announcements per image would
   // spam a screen reader far more than it would help.
@@ -152,19 +156,28 @@ function App() {
               maxWidth,
               format: outputFormat,
               onProgress: (progress) => {
-                setImages((prev) =>
-                  prev.map((image) => (image.id === target.id ? { ...image, progress } : image))
-                );
+                setImages((prev) => updateQueueEntry(prev, target, { progress }));
               },
             });
 
+            // Matched on id *and* File: an edit applied while the batch was
+            // running replaces the File in place, and writing this (pre-edit)
+            // result back would show the wrong bytes, size and ratio under the
+            // edited image — and ship them in the download and the ZIP.
             setImages((prev) =>
-              prev.map((image) =>
-                image.id === target.id
-                  ? { ...image, result, status: 'done', progress: 100, error: undefined }
-                  : image
-              )
+              updateQueueEntry(prev, target, {
+                result,
+                status: 'done',
+                progress: 100,
+                error: undefined,
+              })
             );
+
+            // That write-back is a no-op when the entry was edited or removed
+            // mid-batch. Nothing owns this blob URL then, so release it.
+            if (!imagesRef.current.some((image) => isSameQueueEntry(image, target))) {
+              revokeResultUrl(result);
+            }
 
             return { target, result, error: null as string | null };
           } catch (error) {
@@ -175,11 +188,12 @@ function App() {
                 : `Could not compress "${target.file.name}".`;
 
             setImages((prev) =>
-              prev.map((image) =>
-                image.id === target.id
-                  ? { ...image, status: 'error', progress: 0, result: undefined, error: message }
-                  : image
-              )
+              updateQueueEntry(prev, target, {
+                status: 'error',
+                progress: 0,
+                result: undefined,
+                error: message,
+              })
             );
 
             return { target, result: null, error: message };
@@ -191,8 +205,6 @@ function App() {
         );
         const succeeded = outcomes.filter((outcome) => outcome.result);
         const failed = outcomes.length - succeeded.length;
-
-        toast.dismiss(loadingToast);
 
         if (succeeded.length > 0) {
           // Built from the settled results, not from component state — the
@@ -225,6 +237,10 @@ function App() {
           setAnnouncement(message);
         }
       } finally {
+        // In the finally block, not the happy path: `toast.loading` has no
+        // duration, so a throw anywhere above would otherwise leave
+        // "Compressing N images..." spinning on screen for good.
+        toast.dismiss(loadingToast);
         setIsProcessing(false);
       }
     },
@@ -336,65 +352,73 @@ function App() {
       ? Math.max(0, ((totalOriginalSize - totalCompressedSize) / totalOriginalSize) * 100)
       : 0;
 
-  useKeyboardShortcuts([
-    {
-      key: 'Enter',
-      ctrl: true,
-      action: () => {
-        if (images.length > 0 && !isProcessing) {
-          handleCompress();
-        }
+  // Global shortcuts stand down while any modal is up: Delete would otherwise
+  // clear the queue from inside the image editor (taking the unsaved edit with
+  // it) and Ctrl+Enter would start a batch behind the open dialog.
+  const anyModalOpen = showHistory || previewModalOpen;
+
+  useKeyboardShortcuts(
+    [
+      {
+        key: 'Enter',
+        ctrl: true,
+        action: () => {
+          if (images.length > 0 && !isProcessing) {
+            handleCompress();
+          }
+        },
+        description: 'Compress images',
       },
-      description: 'Compress images',
-    },
-    {
-      key: 's',
-      ctrl: true,
-      action: () => {
-        if (hasResults) {
-          void handleDownloadAsZip();
-        }
+      {
+        key: 's',
+        ctrl: true,
+        action: () => {
+          if (hasResults) {
+            void handleDownloadAsZip();
+          }
+        },
+        description: 'Download as ZIP',
       },
-      description: 'Download as ZIP',
-    },
-    {
-      key: 'c',
-      ctrl: true,
-      shift: true,
-      action: () => {
-        if (hasResults) {
-          void handleCopyImage();
-        }
+      {
+        key: 'c',
+        ctrl: true,
+        shift: true,
+        action: () => {
+          if (hasResults) {
+            void handleCopyImage();
+          }
+        },
+        description: 'Copy compressed image',
       },
-      description: 'Copy compressed image',
-    },
-    {
-      key: 'd',
-      ctrl: true,
-      shift: true,
-      action: () => {
-        if (hasResults) {
-          void handleDownloadAll();
-        }
+      {
+        key: 'd',
+        ctrl: true,
+        shift: true,
+        action: () => {
+          if (hasResults) {
+            void handleDownloadAll();
+          }
+        },
+        description: 'Download all images',
       },
-      description: 'Download all images',
-    },
-    {
-      key: 'Delete',
-      action: () => {
-        if (images.length > 0 && !isProcessing) {
-          handleClearAll();
-        }
+      {
+        key: 'Delete',
+        action: () => {
+          if (images.length > 0 && !isProcessing) {
+            handleClearAll();
+          }
+        },
+        description: 'Clear all images',
       },
-      description: 'Clear all images',
-    },
-    {
-      key: 'h',
-      ctrl: true,
-      action: () => setShowHistory(true),
-      description: 'View history',
-    },
-  ]);
+      {
+        key: 'h',
+        ctrl: true,
+        action: () => setShowHistory(true),
+        description: 'View history',
+      },
+    ],
+    !anyModalOpen
+  );
 
   const controls = (
     <CompressionControls
@@ -488,6 +512,7 @@ function App() {
                   onEdit={handleEditImage}
                   onRetry={handleRetry}
                   isProcessing={isProcessing}
+                  onModalOpenChange={setPreviewModalOpen}
                 />
               )}
             </div>

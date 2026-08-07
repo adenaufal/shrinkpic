@@ -18,6 +18,12 @@ interface ImageEditorProps {
   file: File;
   onSave: (editedFile: File) => void;
   onCancel: () => void;
+  /**
+   * Locks the "Apply Changes" action — set while a batch is running, because
+   * applying an edit to a file that is mid-compression lets the in-flight job
+   * write its pre-edit result back onto the edited image.
+   */
+  disabled?: boolean;
 }
 
 interface Filters {
@@ -27,7 +33,12 @@ interface Filters {
   blur: number;
 }
 
-export const ImageEditor: React.FC<ImageEditorProps> = ({ file, onSave, onCancel }) => {
+export const ImageEditor: React.FC<ImageEditorProps> = ({
+  file,
+  onSave,
+  onCancel,
+  disabled = false,
+}) => {
   const [imageUrl, setImageUrl] = useState<string>('');
   const [rotation, setRotation] = useState(0);
   const [flipH, setFlipH] = useState(false);
@@ -117,7 +128,7 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ file, onSave, onCancel
 
   const handleSave = async () => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas || disabled) return;
 
     canvas.toBlob(
       (blob) => {
@@ -405,7 +416,9 @@ export const ImageEditor: React.FC<ImageEditorProps> = ({ file, onSave, onCancel
           </button>
           <button
             onClick={handleSave}
-            className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            disabled={disabled}
+            title={disabled ? 'Available once compression finishes' : undefined}
+            className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-600"
           >
             <Check className="w-4 h-4" />
             Apply Changes

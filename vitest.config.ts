@@ -6,6 +6,8 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     environment: 'jsdom',
-    include: ['src/**/*.test.ts'],
+    // `.tsx` is included so a component/hook test is never silently skipped —
+    // a test that does not run is worse than no test at all.
+    include: ['src/**/*.test.{ts,tsx}'],
   },
 });

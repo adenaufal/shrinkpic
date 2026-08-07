@@ -28,6 +28,12 @@ interface ImagePreviewProps {
   onEdit: (id: string, editedFile: File) => void;
   onRetry: (id: string) => void;
   isProcessing: boolean;
+  /**
+   * Reports whether one of this component's modals (editor, comparison) is
+   * open. The app disables its global shortcuts while one is — a stray Delete
+   * inside the editor would otherwise clear the queue and discard the edit.
+   */
+  onModalOpenChange?: (open: boolean) => void;
 }
 
 type CopyState = 'idle' | 'copying' | 'success' | 'error';
@@ -243,6 +249,7 @@ export const ImagePreview: React.FC<ImagePreviewProps> = ({
   onEdit,
   onRetry,
   isProcessing,
+  onModalOpenChange,
 }) => {
   const [copyStatus, setCopyStatus] = useState<Record<string, CopyState>>({});
   const [comparisonId, setComparisonId] = useState<string | null>(null);
@@ -323,6 +330,13 @@ export const ImagePreview: React.FC<ImagePreviewProps> = ({
   const handleCompareRequest = useCallback((id: string) => setComparisonId(id), []);
   const handleEditRequest = useCallback((id: string) => setEditingId(id), []);
 
+  const modalOpen = comparisonId !== null || editingId !== null;
+  useEffect(() => {
+    onModalOpenChange?.(modalOpen);
+    // Unmounting (the queue was cleared) takes the modals with it.
+    return () => onModalOpenChange?.(false);
+  }, [modalOpen, onModalOpenChange]);
+
   if (images.length === 0) return null;
 
   const comparisonImage = comparisonId ? images.find((image) => image.id === comparisonId) : undefined;
@@ -369,9 +383,15 @@ export const ImagePreview: React.FC<ImagePreviewProps> = ({
       )}
 
       {/* Image Editor */}
+      {/* An editor opened before a batch started stays mounted through it, so
+          it is explicitly locked down while one runs: applying an edit to an
+          image the pipeline is still compressing is what produced the stale
+          write-back race. Locked rather than force-closed so the user's
+          rotations and filters survive the batch. */}
       {editingImage && (
         <ImageEditor
           file={editingImage.file}
+          disabled={isProcessing}
           onSave={(editedFile) => {
             onEdit(editingImage.id, editedFile);
             setEditingId(null);
