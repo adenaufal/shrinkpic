@@ -1,7 +1,7 @@
 import React from 'react';
 import { Github, Menu, Moon, Sun, History, ShieldCheck, WifiOff, Coins } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from './ui/sheet';
-import { useTheme } from '../contexts/ThemeContext';
+import { useTheme } from '../hooks/useTheme';
 
 interface HeaderProps {
   historyCount: number;

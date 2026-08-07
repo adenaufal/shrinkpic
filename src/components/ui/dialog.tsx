@@ -68,4 +68,42 @@ function DialogDescription({
   );
 }
 
-export { Dialog, DialogTrigger, DialogClose, DialogContent, DialogTitle, DialogDescription };
+/**
+ * Unopinionated large-modal panel: positioning, sizing and clipping only — no
+ * padding, no built-in close button. Callers own their own header/content
+ * (scrollable)/footer sections, exactly like the hand-rolled overlays this
+ * replaces did. Use `DialogContent` above for small single-block dialogs.
+ */
+function DialogPanel({
+  className,
+  children,
+  ...props
+}: React.ComponentProps<typeof DialogPrimitive.Content>) {
+  return (
+    <DialogPrimitive.Portal>
+      <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" />
+      <DialogPrimitive.Content
+        className={cn(
+          'fixed left-1/2 top-1/2 z-50 flex max-h-[90vh] w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2',
+          'flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl',
+          'dark:border-dark-border dark:bg-dark-card',
+          'focus:outline-none',
+          className
+        )}
+        {...props}
+      >
+        {children}
+      </DialogPrimitive.Content>
+    </DialogPrimitive.Portal>
+  );
+}
+
+export {
+  Dialog,
+  DialogTrigger,
+  DialogClose,
+  DialogContent,
+  DialogPanel,
+  DialogTitle,
+  DialogDescription,
+};

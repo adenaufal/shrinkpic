@@ -17,7 +17,6 @@ import {
 } from './utils/imageCompression';
 import { formatFileSize, createId } from './utils/format';
 import { getDefaultPreset, getPresetById } from './utils/presets';
-import { exportToZip } from './utils/zipExport';
 import { validateFiles } from './utils/fileValidation';
 import { getCompressionConcurrency, runWithConcurrency } from './utils/concurrency';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
@@ -34,6 +33,10 @@ function App() {
   const [selectedPreset, setSelectedPreset] = useState(defaultPreset.id);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  // A single visually-hidden live region for batch-level status. Per-card
+  // progress bars are `aria-hidden` — six announcements per image would
+  // spam a screen reader far more than it would help.
+  const [announcement, setAnnouncement] = useState('');
 
   const { history, addSession, deleteSession, clearHistory } = useCompressionHistory();
   const { compress } = useCompressionWorker();
@@ -122,6 +125,7 @@ function App() {
       }
 
       setIsProcessing(true);
+      setAnnouncement(`Compressing ${targets.length} image${targets.length > 1 ? 's' : ''}…`);
 
       // Drop the previous results (and their object URLs) before re-running.
       targets.forEach((target) => revokeResultUrl(target.result));
@@ -205,16 +209,20 @@ function App() {
         }
 
         if (failed === 0) {
-          toast.success(`Compressed ${succeeded.length} image${succeeded.length > 1 ? 's' : ''}`);
+          const message = `Compressed ${succeeded.length} image${succeeded.length > 1 ? 's' : ''}`;
+          toast.success(message);
+          setAnnouncement(message);
         } else if (succeeded.length > 0) {
+          const message = `Finished: ${succeeded.length} compressed, ${failed} failed`;
           toast.error(
             `Compressed ${succeeded.length}, ${failed} failed — see the highlighted cards to retry.`,
             { duration: 6000 }
           );
+          setAnnouncement(message);
         } else {
-          toast.error('Compression failed — see the highlighted cards for details.', {
-            duration: 6000,
-          });
+          const message = 'Compression failed — see the highlighted cards for details.';
+          toast.error(message, { duration: 6000 });
+          setAnnouncement(message);
         }
       } finally {
         setIsProcessing(false);
@@ -301,6 +309,10 @@ function App() {
 
     const zipLoadingToast = toast.loading('Creating ZIP file...');
     try {
+      // Dynamically imported so JSZip and file-saver — dead weight for
+      // everyone who never exports a ZIP — split into their own chunk
+      // instead of loading on first paint.
+      const { exportToZip } = await import('./utils/zipExport');
       await exportToZip(compressedImages, 'compressed-images.zip');
       toast.dismiss(zipLoadingToast);
       toast.success(
@@ -407,6 +419,19 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-dark-bg dark:via-gray-900 dark:to-dark-bg font-sans transition-colors duration-300">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:rounded-lg focus:bg-blue-600 focus:px-4 focus:py-2 focus:text-white focus:shadow-lg"
+      >
+        Skip to content
+      </a>
+
+      {/* Batch-level status only — per-card progress is aria-hidden so a
+          screen reader hears one coherent update instead of a flood. */}
+      <div aria-live="polite" aria-atomic="true" className="sr-only">
+        {announcement}
+      </div>
+
       <div className="container mx-auto px-4 py-8">
         <Header historyCount={history.length} onOpenHistory={() => setShowHistory(true)} />
 
@@ -416,7 +441,7 @@ function App() {
           <Hero compact={images.length > 0} />
         </div>
 
-        <div className="max-w-6xl mx-auto mt-8">
+        <main id="main-content" className="max-w-6xl mx-auto mt-8">
           {/* Controls sit above the grid on small screens, in the sidebar on desktop. */}
           {images.length > 0 && <div className="lg:hidden mb-8">{controls}</div>}
 
@@ -430,9 +455,9 @@ function App() {
 
               {hasResults && (
                 <div className="bg-white dark:bg-dark-card rounded-2xl p-6 border border-gray-200 dark:border-dark-border shadow-sm animate-fade-in">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
                     Compression Summary
-                  </h3>
+                  </h2>
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <span className="text-gray-600 dark:text-gray-400">Total Original Size:</span>
@@ -469,24 +494,23 @@ function App() {
 
             <div className="hidden lg:block">{controls}</div>
           </div>
-        </div>
+        </main>
 
         <div className="max-w-6xl mx-auto">
           <SiteFooter />
         </div>
       </div>
 
-      {showHistory && (
-        <HistoryPanel
-          history={history}
-          onDeleteSession={deleteSession}
-          onClearHistory={() => {
-            clearHistory();
-            toast.success('History cleared');
-          }}
-          onClose={() => setShowHistory(false)}
-        />
-      )}
+      <HistoryPanel
+        open={showHistory}
+        onOpenChange={setShowHistory}
+        history={history}
+        onDeleteSession={deleteSession}
+        onClearHistory={() => {
+          clearHistory();
+          toast.success('History cleared');
+        }}
+      />
     </div>
   );
 }

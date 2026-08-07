@@ -1,5 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useRef, useState } from 'react';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
+import { Dialog, DialogClose, DialogPanel } from './ui/dialog';
 import { formatFileSize } from '../utils/format';
 
 interface ComparisonSliderProps {
@@ -12,6 +14,15 @@ interface ComparisonSliderProps {
   compressionRatio: number;
 }
 
+const STEP = 5;
+const LARGE_STEP = 10;
+
+/**
+ * Built on Radix Dialog for focus trap / Escape / focus restore, and on
+ * Pointer Events (rather than separate mouse and touch listeners) so one
+ * code path drives mouse, touch and pen alike. `touch-none` stops the
+ * browser from panning the page while the divider is being dragged.
+ */
 export const ComparisonSlider: React.FC<ComparisonSliderProps> = ({
   beforeImage,
   afterImage,
@@ -26,91 +37,73 @@ export const ComparisonSlider: React.FC<ComparisonSliderProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
 
   const handleMove = (clientX: number) => {
-    if (!containerRef.current) return;
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect || rect.width === 0) return;
 
-    const rect = containerRef.current.getBoundingClientRect();
     const x = clientX - rect.left;
     const percentage = (x / rect.width) * 100;
-
     setSliderPosition(Math.min(Math.max(percentage, 0), 100));
   };
 
-  const handleMouseDown = () => {
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
     setIsDragging(true);
+    handleMove(e.clientX);
   };
 
-  const handleMouseMove = (e: MouseEvent) => {
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!isDragging) return;
     handleMove(e.clientX);
   };
 
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
+  const stopDragging = () => setIsDragging(false);
 
-  const handleTouchMove = (e: TouchEvent) => {
-    if (!isDragging) return;
-    handleMove(e.touches[0].clientX);
-  };
-
-  useEffect(() => {
-    if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      document.addEventListener('touchmove', handleTouchMove);
-      document.addEventListener('touchend', handleMouseUp);
-
-      return () => {
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
-        document.removeEventListener('touchmove', handleTouchMove);
-        document.removeEventListener('touchend', handleMouseUp);
-      };
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const step = e.shiftKey ? LARGE_STEP : STEP;
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      setSliderPosition((prev) => Math.max(prev - step, 0));
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      setSliderPosition((prev) => Math.min(prev + step, 100));
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      setSliderPosition(0);
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      setSliderPosition(100);
     }
-  }, [isDragging]);
-
-  // Handle keyboard navigation
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      } else if (e.key === 'ArrowLeft') {
-        setSliderPosition(prev => Math.max(prev - 5, 0));
-      } else if (e.key === 'ArrowRight') {
-        setSliderPosition(prev => Math.min(prev + 5, 100));
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+  };
 
   return (
-    <div
-      className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
-      onClick={onClose}
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
     >
-      <div
-        className="relative w-full max-w-6xl bg-white dark:bg-dark-card rounded-xl shadow-2xl overflow-hidden animate-slide-up"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <DialogPanel className="max-w-6xl" aria-describedby="comparison-subtitle">
         {/* Header */}
         <div className="flex items-center justify-between p-4 md:p-6 border-b border-gray-200 dark:border-dark-border">
-          <div>
-            <h2 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-gray-100 truncate">
+          <div className="min-w-0">
+            <DialogPrimitive.Title className="text-lg md:text-xl font-semibold text-gray-900 dark:text-gray-100 truncate">
               {fileName}
-            </h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              Drag the slider to compare images
-            </p>
+            </DialogPrimitive.Title>
+            <DialogPrimitive.Description
+              id="comparison-subtitle"
+              className="text-sm text-gray-600 dark:text-gray-400 mt-1"
+            >
+              Drag the slider, or focus it and use the arrow keys, to compare images
+            </DialogPrimitive.Description>
           </div>
-          <button
-            onClick={onClose}
-            className="flex-shrink-0 p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
-            aria-label="Close comparison"
-          >
-            <X className="w-6 h-6" />
-          </button>
+          <DialogClose asChild>
+            <button
+              className="flex-shrink-0 p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+              aria-label="Close comparison"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </DialogClose>
         </div>
 
         {/* Stats Bar */}
@@ -138,15 +131,17 @@ export const ComparisonSlider: React.FC<ComparisonSliderProps> = ({
         {/* Comparison Container */}
         <div
           ref={containerRef}
-          className="relative w-full aspect-video bg-gray-100 dark:bg-gray-800 overflow-hidden cursor-ew-resize select-none"
-          onMouseDown={handleMouseDown}
-          onTouchStart={handleMouseDown}
+          className="relative w-full aspect-video bg-gray-100 dark:bg-gray-800 overflow-hidden cursor-ew-resize select-none touch-none"
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={stopDragging}
+          onPointerCancel={stopDragging}
         >
           {/* Before Image (Background) */}
           <div className="absolute inset-0">
             <img
               src={beforeImage}
-              alt="Original"
+              alt={`${fileName} before compression`}
               className="w-full h-full object-contain"
               draggable={false}
             />
@@ -162,7 +157,7 @@ export const ComparisonSlider: React.FC<ComparisonSliderProps> = ({
           >
             <img
               src={afterImage}
-              alt="Compressed"
+              alt={`${fileName} after compression`}
               className="w-full h-full object-contain"
               draggable={false}
             />
@@ -173,11 +168,23 @@ export const ComparisonSlider: React.FC<ComparisonSliderProps> = ({
 
           {/* Slider Handle */}
           <div
-            className="absolute top-0 bottom-0 w-1 bg-white shadow-lg cursor-ew-resize"
+            className="absolute top-0 bottom-0 w-1 bg-white shadow-lg cursor-ew-resize touch-none"
             style={{ left: `${sliderPosition}%` }}
           >
-            {/* Handle Circle */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 bg-white dark:bg-gray-800 rounded-full shadow-xl flex items-center justify-center border-2 border-gray-200 dark:border-gray-600">
+            {/* Handle Circle — the actual slider control: focusable, arrow-key
+                operable, and announced with its current position. */}
+            <div
+              role="slider"
+              tabIndex={0}
+              aria-label="Comparison position"
+              aria-orientation="horizontal"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(sliderPosition)}
+              aria-valuetext={`${Math.round(sliderPosition)}% original, ${100 - Math.round(sliderPosition)}% compressed`}
+              onKeyDown={handleKeyDown}
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 bg-white dark:bg-gray-800 rounded-full shadow-xl flex items-center justify-center border-2 border-gray-200 dark:border-gray-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+            >
               <ChevronLeft className="w-4 h-4 text-gray-600 dark:text-gray-400 absolute left-1" />
               <ChevronRight className="w-4 h-4 text-gray-600 dark:text-gray-400 absolute right-1" />
             </div>
@@ -190,7 +197,7 @@ export const ComparisonSlider: React.FC<ComparisonSliderProps> = ({
             <span className="flex items-center gap-1">
               <kbd className="px-2 py-1 bg-white dark:bg-gray-800 rounded border border-gray-300 dark:border-gray-600">←</kbd>
               <kbd className="px-2 py-1 bg-white dark:bg-gray-800 rounded border border-gray-300 dark:border-gray-600">→</kbd>
-              Arrow keys to move
+              Move the focused slider
             </span>
             <span className="flex items-center gap-1">
               <kbd className="px-2 py-1 bg-white dark:bg-gray-800 rounded border border-gray-300 dark:border-gray-600">Esc</kbd>
@@ -198,7 +205,7 @@ export const ComparisonSlider: React.FC<ComparisonSliderProps> = ({
             </span>
           </div>
         </div>
-      </div>
-    </div>
+      </DialogPanel>
+    </Dialog>
   );
 };

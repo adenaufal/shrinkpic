@@ -68,20 +68,23 @@ export const CompressionControls: React.FC<CompressionControlsProps> = ({
     <div className="bg-white dark:bg-dark-card rounded-xl p-2 md:p-6 shadow-lg border border-gray-100 dark:border-dark-border transition-colors duration-300">
       <div className="flex items-center space-x-1.5 mb-2 md:mb-6">
         <Settings className="w-4 h-4 md:w-5 md:h-5 text-blue-600 dark:text-blue-400" />
-        <h3 className="text-sm md:text-lg font-semibold text-gray-900 dark:text-gray-100">Compression Settings</h3>
+        <h2 className="text-sm md:text-lg font-semibold text-gray-900 dark:text-gray-100">Compression Settings</h2>
       </div>
 
       <div className="space-y-2 md:space-y-6">
         {/* Preset Selector */}
         <div>
-          <label className="block text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 md:mb-3">
+          <label
+            htmlFor="preset-select"
+            className="block text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 md:mb-3"
+          >
             Quick Presets
           </label>
           <select
+            id="preset-select"
             value={selectedPreset}
             onChange={(e) => onPresetChange(e.target.value)}
             className="w-full p-1.5 md:p-3 text-xs md:text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md md:rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            aria-label="Select compression preset"
           >
             {COMPRESSION_PRESETS.map((preset) => (
               <option key={preset.id} value={preset.id}>
@@ -92,7 +95,10 @@ export const CompressionControls: React.FC<CompressionControlsProps> = ({
         </div>
 
         <div>
-          <label className="block text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 md:mb-3">
+          <label
+            htmlFor="quality-range"
+            className="block text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 md:mb-3"
+          >
             Quality: {Math.round(quality * 100)}%
             {format === 'png' && (
               <span className="ml-1 font-normal text-gray-500 dark:text-gray-400">
@@ -102,6 +108,7 @@ export const CompressionControls: React.FC<CompressionControlsProps> = ({
           </label>
           <div className="relative">
             <input
+              id="quality-range"
               type="range"
               min="0.1"
               max="1"
@@ -110,7 +117,6 @@ export const CompressionControls: React.FC<CompressionControlsProps> = ({
               disabled={format === 'png'}
               onChange={(e) => handleQualityChange(parseFloat(e.target.value))}
               className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer slider disabled:opacity-50 disabled:cursor-not-allowed"
-              aria-label={`Quality: ${Math.round(quality * 100)}%`}
             />
             <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
               <span className="text-xs">High compression</span>
@@ -120,14 +126,17 @@ export const CompressionControls: React.FC<CompressionControlsProps> = ({
         </div>
 
         <div>
-          <label className="block text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 md:mb-3">
+          <label
+            htmlFor="max-dimension-select"
+            className="block text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 md:mb-3"
+          >
             Max Dimension: {maxWidth}px
           </label>
           <select
+            id="max-dimension-select"
             value={maxWidth}
             onChange={(e) => handleMaxWidthChange(parseInt(e.target.value))}
             className="w-full p-1.5 md:p-3 text-xs md:text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-md md:rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            aria-label={`Max dimension: ${maxWidth} pixels`}
           >
             <option value={800}>800px (Small)</option>
             <option value={1200}>1200px (Medium)</option>
@@ -137,10 +146,13 @@ export const CompressionControls: React.FC<CompressionControlsProps> = ({
         </div>
 
         <div>
-          <label className="block text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 md:mb-3">
+          <span
+            id="format-group-label"
+            className="block text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 md:mb-3"
+          >
             Output Format
-          </label>
-          <div className="grid grid-cols-3 gap-0.5 md:gap-2">
+          </span>
+          <div className="grid grid-cols-3 gap-0.5 md:gap-2" role="group" aria-labelledby="format-group-label">
             {(['jpeg', 'png', 'webp'] as const).map((fmt) => {
               const supported = isFormatSupported(fmt);
               return (
