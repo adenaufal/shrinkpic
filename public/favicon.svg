@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="ImageCompress">
+  <defs>
+    <linearGradient id="ic-bg" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#3B82F6" />
+      <stop offset="1" stop-color="#8B5CF6" />
+    </linearGradient>
+  </defs>
+
+  <!-- App tile -->
+  <rect width="64" height="64" rx="14" fill="url(#ic-bg)" />
+
+  <!-- Arrows squeezing the photo from above and below -->
+  <path d="M23 5h18L32 17z" fill="#fff" />
+  <path d="M23 59h18L32 47z" fill="#fff" />
+
+  <!-- The photo being compressed -->
+  <rect x="9" y="21" width="46" height="22" rx="5" fill="#fff" />
+  <circle cx="19" cy="28.5" r="3.2" fill="#3B82F6" />
+  <path d="M13 40.5 22.5 31l5.5 5.5L36 28.5l13 12z" fill="#8B5CF6" />
+</svg>

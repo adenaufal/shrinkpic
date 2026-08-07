@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Header } from './components/Header';
+import { Hero } from './components/Hero';
+import { SiteFooter } from './components/SiteFooter';
 import { FileUpload } from './components/FileUpload';
 import { CompressionControls } from './components/CompressionControls';
 import { ImagePreview } from './components/ImagePreview';
@@ -404,9 +406,15 @@ function App() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-dark-bg dark:via-gray-900 dark:to-dark-bg font-satoshi transition-colors duration-300">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-dark-bg dark:via-gray-900 dark:to-dark-bg font-sans transition-colors duration-300">
       <div className="container mx-auto px-4 py-8">
         <Header historyCount={history.length} onOpenHistory={() => setShowHistory(true)} />
+
+        <div className="max-w-6xl mx-auto">
+          {/* The pitch stays above the tool, but collapses to one line once the
+              queue is busy so the uploader is never pushed below the fold. */}
+          <Hero compact={images.length > 0} />
+        </div>
 
         <div className="max-w-6xl mx-auto mt-8">
           {/* Controls sit above the grid on small screens, in the sidebar on desktop. */}
@@ -463,20 +471,9 @@ function App() {
           </div>
         </div>
 
-        <footer className="text-center mt-16 py-8 text-gray-500 dark:text-gray-400 text-sm hidden md:block">
-          <p>
-            Built with ❤️ by{' '}
-            <a
-              href="https://github.com/adenaufal"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
-            >
-              adenaufal
-            </a>
-            {' '}• All processing happens locally in your browser
-          </p>
-        </footer>
+        <div className="max-w-6xl mx-auto">
+          <SiteFooter />
+        </div>
       </div>
 
       {showHistory && (

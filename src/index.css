@@ -1,10 +1,19 @@
+/* Self-hosted so the app makes zero third-party requests — a webfont CDN would
+   contradict the privacy claim on the very first page load. Latin subset only:
+   the full set pulls in seven scripts in two formats, which the service worker
+   would then precache. */
+@import '@fontsource/inter/latin-400.css';
+@import '@fontsource/inter/latin-500.css';
+@import '@fontsource/inter/latin-600.css';
+@import '@fontsource/inter/latin-700.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
-  * {
-    font-family: 'Satoshi', system-ui, -apple-system, sans-serif;
+  html {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
 }
 

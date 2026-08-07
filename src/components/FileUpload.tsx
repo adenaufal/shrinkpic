@@ -1,5 +1,5 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { Upload, Image as ImageIcon } from 'lucide-react';
+import { Upload, Image as ImageIcon, Layers, Lock } from 'lucide-react';
 import { ACCEPT_ATTRIBUTE, MAX_FILES, MAX_FILE_BYTES } from '../utils/fileValidation';
 import { formatFileSize } from '../utils/format';
 
@@ -136,23 +136,33 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, isProcessi
           </div>
 
           <div className="space-y-2">
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
               {isProcessing ? 'Processing...' : isDragActive ? 'Drop your images' : 'Drop your images here'}
-            </h3>
+            </h2>
             <p className="text-gray-600 dark:text-gray-400">
               {isProcessing
                 ? 'Compressing your images in your browser'
-                : 'or click to browse • Supports JPG, PNG, WebP, GIF, AVIF'}
+                : 'or click to browse — shrink photos, screenshots and graphics before you send them'}
             </p>
           </div>
 
-          <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
-            <div className="flex items-center space-x-1">
-              <ImageIcon className="w-4 h-4" />
-              <span>
+          {/* A first-time visitor should be able to answer "what does this do,
+              what can I give it, and where do my files go" without leaving. */}
+          <div className="flex flex-col items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+              <span className="flex items-center gap-1.5">
+                <ImageIcon className="w-4 h-4 shrink-0" aria-hidden="true" />
+                JPG, PNG, WebP, AVIF, GIF, BMP
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Layers className="w-4 h-4 shrink-0" aria-hidden="true" />
                 Up to {MAX_FILES} images, {formatFileSize(MAX_FILE_BYTES)} each
               </span>
             </div>
+            <span className="flex items-center gap-1.5 font-medium text-green-700 dark:text-green-400">
+              <Lock className="w-4 h-4 shrink-0" aria-hidden="true" />
+              Compressed on this device — your files are never uploaded
+            </span>
           </div>
         </div>
       </div>
