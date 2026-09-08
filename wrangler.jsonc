@@ -1,0 +1,20 @@
+{
+  // Shrinkpic is a static SPA: no server-side code, so this is an
+  // assets-only Worker — no `main`, the whole site ships from the asset
+  // store. Deploy with `npm run deploy`.
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "shrinkpic",
+  "compatibility_date": "2026-08-15",
+  "assets": {
+    "directory": "./dist",
+    // Single-page app: unmatched paths resolve to the shell (real files such
+    // as assets/*, sw.js, robots.txt are still served first).
+    "not_found_handling": "single-page-application",
+    "html_handling": "auto-trailing-slash"
+  },
+  // Attach the production domain on deploy. Requires the adenaufal.com zone
+  // to live in the same Cloudflare account that runs `wrangler deploy`.
+  "routes": [
+    { "pattern": "shrinkpic.adenaufal.com", "custom_domain": true }
+  ]
+}

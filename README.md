@@ -94,12 +94,12 @@ dev server.
 [vite-plugin-pwa](https://vite-pwa-org.netlify.app/) ·
 [Radix UI](https://www.radix-ui.com/) · [lucide-react](https://lucide.dev/)
 
-Deployed at [shrinkpic.adenaufal.com](https://shrinkpic.adenaufal.com) — a static
-SPA with no server side. `netlify.toml` is carried over from the previous
-Netlify host and documents the SPA fallback, asset caching and security
-headers (including a CSP whose `connect-src 'self'` enforces the no-upload
-promise at the browser level); it will be replaced by equivalent Cloudflare
-config during the hosting migration.
+Deployed on [Cloudflare Workers](https://developers.cloudflare.com/workers/static-assets/)
+static assets at [shrinkpic.adenaufal.com](https://shrinkpic.adenaufal.com).
+`wrangler.jsonc` carries the config (assets-only Worker, SPA fallback, custom
+domain) and `public/_headers` the security and caching headers — including a
+CSP whose `connect-src 'self'` enforces the no-upload promise at the browser
+level. Deploy with `npm run deploy` (build, then `wrangler deploy`).
 
 ## Contributing
 
