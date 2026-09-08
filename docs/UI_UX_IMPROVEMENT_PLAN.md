@@ -1,8 +1,8 @@
-# UI/UX Improvement Plan - ImageCompress
+# UI/UX Improvement Plan - Shrinkpic
 
 **Document Version:** 1.0
 **Date:** November 5, 2025
-**Project:** ImageCompress - Browser-based Image Compression Tool
+**Project:** Shrinkpic - Browser-based Image Compression Tool
 
 ---
 
@@ -23,7 +23,7 @@
 
 ## Executive Summary
 
-This document outlines a comprehensive improvement plan for ImageCompress, focusing on enhancing the user interface and user experience. The current application provides solid core functionality with a clean, modern design. This plan identifies opportunities to elevate the product to a more polished, feature-rich, and accessible image compression tool.
+This document outlines a comprehensive improvement plan for Shrinkpic, focusing on enhancing the user interface and user experience. The current application provides solid core functionality with a clean, modern design. This plan identifies opportunities to elevate the product to a more polished, feature-rich, and accessible image compression tool.
 
 ### Key Focus Areas
 
@@ -986,7 +986,7 @@ src/
 
 ## Conclusion
 
-This comprehensive UI/UX improvement plan provides a roadmap for evolving ImageCompress into a best-in-class image compression tool. The plan prioritizes high-impact, user-facing improvements while maintaining the application's core strengths: privacy, simplicity, and performance.
+This comprehensive UI/UX improvement plan provides a roadmap for evolving Shrinkpic into a best-in-class image compression tool. The plan prioritizes high-impact, user-facing improvements while maintaining the application's core strengths: privacy, simplicity, and performance.
 
 ### Recommended Approach
 
@@ -1002,4 +1002,4 @@ This comprehensive UI/UX improvement plan provides a roadmap for evolving ImageC
 - **Progressive Enhancement**: Core functionality works for everyone, enhanced features for capable browsers
 - **Feedback-Driven**: Implement user analytics and iterate based on actual usage
 
-By following this plan, ImageCompress can become the go-to image compression tool for designers, developers, content creators, and anyone needing quick, high-quality image optimization.
+By following this plan, Shrinkpic can become the go-to image compression tool for designers, developers, content creators, and anyone needing quick, high-quality image optimization.

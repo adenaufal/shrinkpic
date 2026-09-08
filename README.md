@@ -1,7 +1,7 @@
 <div align="center">
-  <img src="public/favicon.svg" width="88" height="88" alt="ImageCompress" />
+  <img src="public/favicon.svg" width="88" height="88" alt="Shrinkpic" />
 
-  # ImageCompress
+# Shrinkpic
 
   **Compress images in your browser. Nothing ever leaves your device.**
 
@@ -9,7 +9,7 @@
   browser — no uploads, no accounts, no tracking. Turn off your Wi-Fi and it
   still works.
 
-  <a href="https://imgcmprs.netlify.app"><img src="https://img.shields.io/badge/Open%20the%20app-3B82F6?style=for-the-badge" alt="Open the app" /></a>
+  <a href="https://shrinkpic.adenaufal.com"><img src="https://img.shields.io/badge/Open%20the%20app-3B82F6?style=for-the-badge" alt="Open the app" /></a>
   <img src="https://img.shields.io/badge/license-MIT-8B5CF6?style=for-the-badge" alt="MIT licensed" />
 </div>
 
@@ -18,7 +18,7 @@
 ## Why this one
 
 Every mainstream online compressor — TinyPNG, Compressor.io, and the rest —
-works by uploading your files to a server. ImageCompress cannot, because there
+works by uploading your files to a server. Shrinkpic cannot, because there
 is no server: the whole pipeline is `<canvas>` and Web Workers running in your
 tab.
 
@@ -51,14 +51,14 @@ install the app and go offline — it behaves identically.
 
 ## Screenshot
 
-![The ImageCompress workspace after a run: two photos compressed from 4.89 MB to 303.17 KB (94% smaller), showing the drop zone, the compression settings and the results grid](images/screenshot.png)
+![The Shrinkpic workspace after a run: two photos compressed from 4.89 MB to 303.17 KB (94% smaller), showing the drop zone, the compression settings and the results grid](images/screenshot.png)
 
 ## Privacy
 
 - No server, no accounts, no analytics, no advertising, no cookies.
 - No third-party requests at all — fonts and every other asset are self-hosted.
 - Two keys are written to this site's `localStorage` and nowhere else:
-  `imagecompress_history` (file names, byte sizes and settings per run) and
+  `shrinkpic_history` (file names, byte sizes and settings per run) and
   `theme`. Clearing the history in-app or clearing site data removes both.
 - A service worker caches the app's own files so it can run offline.
 
@@ -71,8 +71,8 @@ Requires Node 22+ (the test suite's jsdom dependency requires it; `package.json`
 declares this via `engines`).
 
 ```bash
-git clone https://github.com/adenaufal/imagecompress.git
-cd imagecompress
+git clone https://github.com/adenaufal/shrinkpic.git
+cd shrinkpic
 npm install
 
 npm run dev        # dev server on http://localhost:5173
@@ -94,9 +94,12 @@ dev server.
 [vite-plugin-pwa](https://vite-pwa-org.netlify.app/) ·
 [Radix UI](https://www.radix-ui.com/) · [lucide-react](https://lucide.dev/)
 
-Deployed on [Netlify](https://www.netlify.com/); `netlify.toml` carries the SPA
-fallback, asset caching and security headers (including a CSP whose
-`connect-src 'self'` enforces the no-upload promise at the browser level).
+Deployed at [shrinkpic.adenaufal.com](https://shrinkpic.adenaufal.com) — a static
+SPA with no server side. `netlify.toml` is carried over from the previous
+Netlify host and documents the SPA fallback, asset caching and security
+headers (including a CSP whose `connect-src 'self'` enforces the no-upload
+promise at the browser level); it will be replaced by equivalent Cloudflare
+config during the hosting migration.
 
 ## Contributing
 

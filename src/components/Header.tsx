@@ -7,7 +7,7 @@ interface HeaderProps {
   onOpenHistory: () => void;
 }
 
-const REPO_URL = 'https://github.com/adenaufal/imagecompress';
+const REPO_URL = 'https://github.com/adenaufal/shrinkpic';
 
 /**
  * One brand bar for every breakpoint — the previous version shipped a separate
@@ -27,7 +27,7 @@ export const Header: React.FC<HeaderProps> = ({ historyCount, onOpenHistory }) =
         <div className="flex min-w-0 items-center gap-2">
           <img src="/favicon.svg" alt="" aria-hidden="true" className="h-7 w-7 shrink-0" />
           <span className="truncate text-base font-semibold tracking-tight text-gray-900 dark:text-gray-50">
-            ImageCompress
+            Shrinkpic
           </span>
         </div>
 

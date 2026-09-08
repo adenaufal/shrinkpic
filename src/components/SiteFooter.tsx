@@ -3,7 +3,7 @@ import { Github } from 'lucide-react';
 
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from './ui/dialog';
 
-const REPO_URL = 'https://github.com/adenaufal/imagecompress';
+const REPO_URL = 'https://github.com/adenaufal/shrinkpic';
 
 const linkClass =
   'rounded text-gray-500 underline-offset-2 transition-colors hover:text-brand-600 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-gray-400 dark:hover:text-brand-400';
@@ -26,7 +26,7 @@ export const SiteFooter: React.FC = () => {
       <footer className="mt-12 border-t border-gray-200 dark:border-dark-border">
         <div className="mx-auto flex max-w-5xl flex-col items-center gap-3 px-4 py-6 text-sm text-gray-500 dark:text-gray-400 sm:flex-row sm:justify-between">
           <p className="text-center sm:text-left">
-            &copy; {new Date().getFullYear()} ImageCompress &middot; MIT licensed &middot; every
+            &copy; {new Date().getFullYear()} Shrinkpic &middot; MIT licensed &middot; every
             image is processed on your device
           </p>
 
@@ -68,7 +68,7 @@ export const SiteFooter: React.FC = () => {
           <h3 className={sectionTitleClass}>What is stored on your device</h3>
           <p className={bodyClass}>
             Two things live in this site's <code>localStorage</code>, and nowhere else:{' '}
-            <code>imagecompress_history</code> (file names, byte sizes and the settings used for each
+            <code>shrinkpic_history</code> (file names, byte sizes and the settings used for each
             compression run, shown in the History panel) and <code>theme</code> (your light/dark
             choice). Clear the history from the History panel, or clear this site's data in your
             browser, and both are gone.
@@ -91,7 +91,7 @@ export const SiteFooter: React.FC = () => {
               rel="noopener noreferrer"
               className="text-brand-600 underline underline-offset-2 dark:text-brand-400"
             >
-              github.com/adenaufal/imagecompress
+              github.com/adenaufal/shrinkpic
             </a>
             .
           </p>
@@ -100,13 +100,13 @@ export const SiteFooter: React.FC = () => {
 
       <Dialog open={panel === 'about'} onOpenChange={(open) => !open && setPanel(null)}>
         <DialogContent aria-describedby="about-summary">
-          <DialogTitle>About ImageCompress</DialogTitle>
+          <DialogTitle>About Shrinkpic</DialogTitle>
           <DialogDescription id="about-summary">
             A free image compressor that runs entirely on your device.
           </DialogDescription>
 
           <p className={bodyClass}>
-            ImageCompress resizes and re-encodes JPG, PNG, WebP, AVIF, GIF and BMP files using your
+            Shrinkpic resizes and re-encodes JPG, PNG, WebP, AVIF, GIF and BMP files using your
             browser's own image pipeline. Drop in a batch, pick a preset or dial in quality, format
             and maximum dimension yourself, then download the results individually or as a ZIP.
           </p>

@@ -1,17 +1,17 @@
 {
-  "name": "imagecompress",
+  "name": "shrinkpic",
   "private": true,
   "version": "1.0.0",
   "description": "Compress JPG, PNG, WebP and AVIF images entirely in your browser — nothing is ever uploaded.",
   "author": "adenaufal",
   "license": "MIT",
-  "homepage": "https://imgcmprs.netlify.app",
+  "homepage": "https://shrinkpic.adenaufal.com",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/adenaufal/imagecompress.git"
+    "url": "git+https://github.com/adenaufal/shrinkpic.git"
   },
   "bugs": {
-    "url": "https://github.com/adenaufal/imagecompress/issues"
+    "url": "https://github.com/adenaufal/shrinkpic/issues"
   },
   "keywords": [
     "image-compression",

@@ -22,7 +22,7 @@ export interface HistorySession {
   };
 }
 
-const STORAGE_KEY = 'imagecompress_history';
+const STORAGE_KEY = 'shrinkpic_history';
 const MAX_HISTORY_ITEMS = 20;
 
 const loadHistory = (): HistorySession[] => {

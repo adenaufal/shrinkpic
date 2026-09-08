@@ -21,7 +21,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
-    console.error('ImageCompress crashed:', error, info.componentStack);
+    console.error('Shrinkpic crashed:', error, info.componentStack);
   }
 
   handleReload = () => {
@@ -45,7 +45,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
             Something went wrong
           </h1>
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-            ImageCompress hit an unexpected error. Your images were never uploaded anywhere —
+            Shrinkpic hit an unexpected error. Your images were never uploaded anywhere —
             reloading starts a fresh session.
           </p>
           <pre className="text-left text-xs text-gray-500 dark:text-gray-500 bg-gray-50 dark:bg-gray-900/60 rounded-lg p-3 mb-4 overflow-x-auto">
@@ -56,7 +56,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
             className="inline-flex items-center justify-center gap-2 w-full bg-brand-600 dark:bg-brand-500 text-white px-4 py-2.5 rounded-lg font-medium hover:bg-brand-700 dark:hover:bg-brand-600 transition-colors"
           >
             <RotateCcw className="w-4 h-4" />
-            Reload ImageCompress
+            Reload Shrinkpic
           </button>
         </div>
       </div>
