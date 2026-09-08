@@ -78,6 +78,7 @@ npm install
 npm run dev        # dev server on http://localhost:5173
 npm run typecheck  # tsc -b
 npm run lint       # eslint
+npm test           # vitest (unit tests for compression, queue, workers, …)
 npm run build      # production build into dist/
 npm run preview    # serve the production build (needed to exercise the PWA)
 ```
@@ -100,7 +101,12 @@ fallback, asset caching and security headers (including a CSP whose
 ## Contributing
 
 Issues and pull requests are welcome. Please run `npm run typecheck`,
-`npm run lint` and `npm run build` before opening a PR.
+`npm run lint`, `npm test` and `npm run build` before opening a PR — the same
+four steps CI runs on every push (see `.github/workflows/ci.yml`).
+
+Longer-form planning documents live in [`docs/`](docs/), starting with the
+[UI/UX improvement plan](docs/UI_UX_IMPROVEMENT_PLAN.md) that drove the last
+redesign.
 
 ## License
 

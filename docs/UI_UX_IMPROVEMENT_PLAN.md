@@ -25,7 +25,8 @@
 
 This document outlines a comprehensive improvement plan for ImageCompress, focusing on enhancing the user interface and user experience. The current application provides solid core functionality with a clean, modern design. This plan identifies opportunities to elevate the product to a more polished, feature-rich, and accessible image compression tool.
 
-### Key Focus Areas:
+### Key Focus Areas
+
 - **Visual Polish**: Dark mode, enhanced animations, better visual feedback
 - **User Experience**: Comparison tools, preset profiles, improved workflows
 - **Functionality**: Advanced editing, batch operations, export options
@@ -38,6 +39,7 @@ This document outlines a comprehensive improvement plan for ImageCompress, focus
 ## Current State Analysis
 
 ### Strengths ✅
+
 - Clean, modern interface with Tailwind CSS
 - Responsive design (mobile and desktop)
 - Drag-and-drop file upload
@@ -50,6 +52,7 @@ This document outlines a comprehensive improvement plan for ImageCompress, focus
 - Smooth animations with Tailwind
 
 ### Areas for Improvement 🎯
+
 - Limited visual feedback during processing
 - No dark mode support
 - Basic comparison capabilities
@@ -71,7 +74,8 @@ This document outlines a comprehensive improvement plan for ImageCompress, focus
 **Effort:** Medium
 **Impact:** High user satisfaction
 
-#### Implementation Details:
+#### Implementation Details
+
 - System preference detection using `prefers-color-scheme`
 - Manual toggle with smooth transition
 - Persistent user preference in localStorage
@@ -95,12 +99,14 @@ useEffect(() => {
 ```
 
 **Components to Update:**
+
 - App.tsx: Add theme context provider
 - Header.tsx: Add theme toggle button
 - All components: Add dark mode classes
 - tailwind.config.js: Enable dark mode
 
 **Design Mockup Changes:**
+
 - Moon/Sun icon toggle in header
 - Smooth transition (300ms) between themes
 - Maintain gradient accents for brand consistency
@@ -113,7 +119,8 @@ useEffect(() => {
 **Effort:** Low
 **Impact:** Better perceived performance
 
-#### Skeleton Screens:
+#### Skeleton Screens
+
 - Replace spinning indicators with content-aware skeletons
 - Shimmer effect for loading cards
 - Progressive reveal as images load
@@ -129,7 +136,8 @@ const ImageSkeleton = () => (
 );
 ```
 
-#### Progress Indicators:
+#### Progress Indicators
+
 - Linear progress bar for each image
 - Overall batch progress in header
 - Percentage completion display
@@ -143,7 +151,8 @@ const ImageSkeleton = () => (
 **Effort:** Low
 **Impact:** Enhanced polish
 
-#### Micro-interactions:
+#### Micro-interactions
+
 - Button hover states with scale and shadow
 - Card hover elevation
 - Smooth transitions on all state changes
@@ -180,14 +189,16 @@ const ImageSkeleton = () => (
 **Effort:** Medium
 **Impact:** Better visual hierarchy
 
-#### Semantic Colors:
+#### Semantic Colors
+
 - Success: Enhanced green with variants
 - Warning: Yellow for file size warnings
 - Error: Red for failed compressions
 - Info: Blue for tips and hints
 - Neutral: Gray scale refinement
 
-#### Gradient Enhancements:
+#### Gradient Enhancements
+
 - More gradient options for cards
 - Animated gradient backgrounds
 - Subtle mesh gradients for hero section
@@ -200,7 +211,8 @@ const ImageSkeleton = () => (
 **Effort:** Low
 **Impact:** Better readability
 
-#### Font Hierarchy:
+#### Font Hierarchy
+
 - Maintain Satoshi font
 - Add weight variations (300, 400, 500, 600, 700)
 - Better line-height and letter-spacing
@@ -217,7 +229,8 @@ const ImageSkeleton = () => (
 **Effort:** Medium
 **Impact:** Major feature addition
 
-#### Features:
+#### Features
+
 - Interactive slider to compare original vs compressed
 - Side-by-side and overlay modes
 - Zoom functionality
@@ -236,6 +249,7 @@ interface ComparisonSliderProps {
 ```
 
 **UI Layout:**
+
 - Modal or full-screen view
 - Touch-friendly slider handle
 - Keyboard controls (arrow keys)
@@ -249,37 +263,43 @@ interface ComparisonSliderProps {
 **Effort:** Low
 **Impact:** Simplified user workflow
 
-#### Preset Categories:
+#### Preset Categories
 
 **Web Optimized:**
+
 - Quality: 75%
 - Max Width: 1920px
 - Format: WebP
 - Use case: "Perfect for websites and blogs"
 
 **Social Media:**
+
 - Quality: 80%
 - Max Width: 1200px
 - Format: JPEG
 - Use case: "Optimized for Instagram, Facebook, Twitter"
 
 **Email Attachment:**
+
 - Quality: 65%
 - Max Width: 800px
 - Format: JPEG
 - Use case: "Small file size for email"
 
 **Print Quality:**
+
 - Quality: 95%
 - Max Width: 2560px
 - Format: PNG
 - Use case: "High quality for printing"
 
 **Custom:**
+
 - User-defined settings
 - Save custom presets
 
 **UI Implementation:**
+
 - Dropdown or button group in CompressionControls
 - Visual indicators for each preset
 - Quick switch between presets
@@ -293,7 +313,8 @@ interface ComparisonSliderProps {
 **Effort:** Medium
 **Impact:** Better bulk workflow
 
-#### Features:
+#### Features
+
 - Select/deselect individual images
 - Bulk actions on selected:
   - Delete selected
@@ -305,6 +326,7 @@ interface ComparisonSliderProps {
 - Sort by name, size, compression ratio
 
 **UI Components:**
+
 - Checkbox on each image card
 - Action bar when items selected
 - Keyboard shortcuts (Ctrl+A, Delete)
@@ -317,7 +339,8 @@ interface ComparisonSliderProps {
 **Effort:** Low
 **Impact:** Power user features
 
-#### Collapsible Advanced Section:
+#### Collapsible Advanced Section
+
 - EXIF data preservation toggle
 - Color profile management
 - Chroma subsampling options
@@ -342,13 +365,15 @@ interface ComparisonSliderProps {
 **Effort:** Low
 **Impact:** Better user feedback
 
-#### Notification Types:
+#### Notification Types
+
 - Success: "Images compressed successfully"
 - Error: "Compression failed for 2 images"
 - Info: "Processing 15 images..."
 - Warning: "Some images are very large"
 
 **Implementation:**
+
 - Use radix-ui/react-toast or react-hot-toast
 - Position: Bottom-right on desktop, top-center on mobile
 - Auto-dismiss with manual close option
@@ -363,7 +388,8 @@ interface ComparisonSliderProps {
 **Effort:** Medium
 **Impact:** Error recovery
 
-#### Actions to Track:
+#### Actions to Track
+
 - Add images
 - Remove images
 - Compress images
@@ -371,6 +397,7 @@ interface ComparisonSliderProps {
 - Change settings
 
 **Implementation:**
+
 - Command pattern for history
 - Keyboard shortcuts (Ctrl+Z, Ctrl+Shift+Z)
 - History limit (20 actions)
@@ -384,7 +411,8 @@ interface ComparisonSliderProps {
 **Effort:** Medium
 **Impact:** Convenience feature
 
-#### Features:
+#### Features
+
 - Save compression sessions to IndexedDB
 - View recent compressions (last 10)
 - Reload previous session
@@ -392,6 +420,7 @@ interface ComparisonSliderProps {
 - Clear history option
 
 **UI:**
+
 - History panel in Sheet/Drawer
 - Quick access from header
 - Date/time stamps
@@ -407,7 +436,8 @@ interface ComparisonSliderProps {
 **Effort:** High
 **Impact:** Major feature addition
 
-#### Basic Editing:
+#### Basic Editing
+
 - Crop with preset ratios (1:1, 4:3, 16:9, custom)
 - Rotate (90°, 180°, 270°)
 - Flip horizontal/vertical
@@ -416,6 +446,7 @@ interface ComparisonSliderProps {
 - Filters (grayscale, sepia, etc.)
 
 **Implementation Considerations:**
+
 - Use canvas API or library like react-image-crop
 - Edit before compression workflow
 - Preview in real-time
@@ -429,7 +460,8 @@ interface ComparisonSliderProps {
 **Effort:** Low
 **Impact:** Better bulk download
 
-#### Features:
+#### Features
+
 - Download all compressed images as ZIP
 - Custom ZIP filename
 - Progress indicator during ZIP creation
@@ -459,7 +491,8 @@ const downloadAsZip = async (images: CompressionResult[]) => {
 **Effort:** Medium
 **Impact:** Better organization
 
-#### Features:
+#### Features
+
 - Reorder images before compression
 - Drag to remove (trash zone)
 - Visual feedback during drag
@@ -473,7 +506,8 @@ const downloadAsZip = async (images: CompressionResult[]) => {
 **Effort:** Low
 **Impact:** Additional use case
 
-#### Feature:
+#### Feature
+
 - Option to convert without compression
 - Quality: 100% preset
 - Focus on format change (PNG → WEBP, etc.)
@@ -487,7 +521,8 @@ const downloadAsZip = async (images: CompressionResult[]) => {
 **Effort:** High
 **Impact:** Professional feature
 
-#### Features:
+#### Features
+
 - Text watermark
 - Image watermark
 - Position selection (9-grid)
@@ -503,7 +538,8 @@ const downloadAsZip = async (images: CompressionResult[]) => {
 **Effort:** Medium
 **Impact:** Guided experience
 
-#### Smart Suggestions:
+#### Smart Suggestions
+
 - Analyze image dimensions and suggest optimal settings
 - Warn about quality too low
 - Suggest format based on content (photos → JPEG, graphics → PNG)
@@ -519,7 +555,8 @@ const downloadAsZip = async (images: CompressionResult[]) => {
 **Effort:** Medium
 **Impact:** WCAG 2.1 AA compliance
 
-#### Implementation:
+#### Implementation
+
 - Tab order optimization
 - Keyboard shortcuts:
   - `Space/Enter`: Open file dialog
@@ -539,7 +576,8 @@ const downloadAsZip = async (images: CompressionResult[]) => {
 **Effort:** Low
 **Impact:** Screen reader support
 
-#### Updates Needed:
+#### Updates Needed
+
 - Add `aria-label` to icon buttons
 - Add `role="region"` to major sections
 - Add `aria-live` regions for dynamic content
@@ -566,7 +604,8 @@ const downloadAsZip = async (images: CompressionResult[]) => {
 **Effort:** Low
 **Impact:** WCAG compliance
 
-#### Audit and Fix:
+#### Audit and Fix
+
 - Ensure 4.5:1 contrast ratio for normal text
 - Ensure 3:1 for large text and UI components
 - Test with color blindness simulators
@@ -580,7 +619,8 @@ const downloadAsZip = async (images: CompressionResult[]) => {
 **Effort:** Low
 **Impact:** Better keyboard UX
 
-#### Features:
+#### Features
+
 - Focus trap in modals
 - Return focus after modal close
 - Focus first error in forms
@@ -594,7 +634,8 @@ const downloadAsZip = async (images: CompressionResult[]) => {
 **Effort:** Low
 **Impact:** Non-visual feedback
 
-#### Announcements for:
+#### Announcements for
+
 - File upload success
 - Compression start/complete
 - Errors
@@ -611,7 +652,8 @@ const downloadAsZip = async (images: CompressionResult[]) => {
 **Effort:** High
 **Impact:** Non-blocking UI
 
-#### Implementation:
+#### Implementation
+
 - Move compression logic to Web Worker
 - Parallel processing of multiple images
 - Keep UI responsive during heavy operations
@@ -634,7 +676,8 @@ self.onmessage = async (e) => {
 **Effort:** Medium
 **Impact:** Handle 100+ images
 
-#### Implementation:
+#### Implementation
+
 - Use react-virtual or react-window
 - Render only visible image cards
 - Smooth scrolling performance
@@ -648,7 +691,8 @@ self.onmessage = async (e) => {
 **Effort:** Low
 **Impact:** Faster initial render
 
-#### Features:
+#### Features
+
 - Load images as they enter viewport
 - Blur-up placeholder technique
 - Progressive image loading
@@ -661,7 +705,8 @@ self.onmessage = async (e) => {
 **Effort:** Low
 **Impact:** Reduce unnecessary renders
 
-#### Implementation:
+#### Implementation
+
 - Debounce quality slider changes
 - Update preview after user stops adjusting
 - Use lodash.debounce or custom hook
@@ -674,7 +719,8 @@ self.onmessage = async (e) => {
 **Effort:** Low
 **Impact:** Faster initial load
 
-#### Routes/Features to Split:
+#### Routes/Features to Split
+
 - Image editing tools (lazy load)
 - Comparison slider (lazy load)
 - History panel (lazy load)
@@ -690,7 +736,8 @@ self.onmessage = async (e) => {
 **Effort:** Medium
 **Impact:** Mobile-first feature
 
-#### Implementation:
+#### Implementation
+
 - Add camera option to file input
 - Direct camera capture on mobile
 - Front/back camera selection
@@ -713,7 +760,8 @@ self.onmessage = async (e) => {
 **Effort:** Medium
 **Impact:** Better mobile UX
 
-#### Gestures:
+#### Gestures
+
 - Swipe to delete image card
 - Pinch to zoom on previews
 - Pull to refresh (reload app)
@@ -727,7 +775,8 @@ self.onmessage = async (e) => {
 **Effort:** Low
 **Impact:** Better mobile usability
 
-#### Improvements:
+#### Improvements
+
 - Larger touch targets (min 44x44px)
 - Bottom sheet for actions (iOS style)
 - Floating action button for compress
@@ -742,7 +791,8 @@ self.onmessage = async (e) => {
 **Effort:** Medium
 **Impact:** Native app feel
 
-#### Features:
+#### Features
+
 - Add to home screen
 - Offline capability
 - Push notifications for completed compressions
@@ -756,7 +806,7 @@ self.onmessage = async (e) => {
 ### High Priority (Weeks 1-4)
 
 | Feature | Effort | Impact | Priority Score |
-|---------|--------|--------|----------------|
+| --------- | -------- | -------- | ---------------- |
 | Dark Mode | Medium | High | 9/10 |
 | Before/After Slider | Medium | High | 9/10 |
 | Preset Profiles | Low | High | 9/10 |
@@ -769,7 +819,7 @@ self.onmessage = async (e) => {
 ### Medium Priority (Weeks 5-8)
 
 | Feature | Effort | Impact | Priority Score |
-|---------|--------|--------|----------------|
+| --------- | -------- | -------- | ---------------- |
 | Image Editing Tools | High | High | 8/10 |
 | Toast Notifications | Low | Medium | 7/10 |
 | Batch Operations | Medium | Medium | 7/10 |
@@ -781,7 +831,7 @@ self.onmessage = async (e) => {
 ### Low Priority (Weeks 9-12)
 
 | Feature | Effort | Impact | Priority Score |
-|---------|--------|--------|----------------|
+| --------- | -------- | -------- | ---------------- |
 | Compression History | Medium | Low | 5/10 |
 | Virtual Scrolling | Medium | Medium | 6/10 |
 | Watermark Feature | High | Low | 4/10 |
@@ -817,6 +867,7 @@ self.onmessage = async (e) => {
 ### Configuration Updates
 
 #### tailwind.config.js
+
 ```js
 export default {
   darkMode: 'class', // Enable dark mode
@@ -832,7 +883,7 @@ export default {
 
 ### File Structure Additions
 
-```
+```text
 src/
   components/
     comparison/
@@ -866,6 +917,7 @@ src/
 ## Testing Checklist
 
 ### Cross-Browser Testing
+
 - [ ] Chrome (latest)
 - [ ] Firefox (latest)
 - [ ] Safari (latest)
@@ -874,6 +926,7 @@ src/
 - [ ] Chrome Mobile (Android)
 
 ### Accessibility Testing
+
 - [ ] Screen reader (NVDA/JAWS/VoiceOver)
 - [ ] Keyboard-only navigation
 - [ ] Color contrast checker
@@ -881,6 +934,7 @@ src/
 - [ ] Lighthouse accessibility audit
 
 ### Performance Testing
+
 - [ ] Compress 1 image
 - [ ] Compress 10 images
 - [ ] Compress 50+ images
@@ -889,6 +943,7 @@ src/
 - [ ] Network throttling test
 
 ### Device Testing
+
 - [ ] Desktop (1920x1080)
 - [ ] Laptop (1366x768)
 - [ ] Tablet (768x1024)
@@ -901,23 +956,27 @@ src/
 ## Success Metrics
 
 ### User Engagement
+
 - Time on site increase
 - Number of images processed per session
 - Return user rate
 - Feature adoption rates
 
 ### Performance
+
 - First Contentful Paint < 1.5s
 - Time to Interactive < 3s
 - Compression processing time
 - UI responsiveness (no janky scrolling)
 
 ### Accessibility
+
 - Lighthouse accessibility score > 95
 - Zero critical WCAG violations
 - Keyboard task completion rate
 
 ### User Satisfaction
+
 - User feedback/ratings
 - Error rate reduction
 - Feature request analysis
@@ -929,12 +988,14 @@ src/
 
 This comprehensive UI/UX improvement plan provides a roadmap for evolving ImageCompress into a best-in-class image compression tool. The plan prioritizes high-impact, user-facing improvements while maintaining the application's core strengths: privacy, simplicity, and performance.
 
-### Recommended Approach:
+### Recommended Approach
+
 1. **Phase 1 (Weeks 1-4)**: Focus on visual polish and essential UX improvements (dark mode, presets, better feedback)
 2. **Phase 2 (Weeks 5-8)**: Add advanced features (comparison slider, image editing, batch operations)
 3. **Phase 3 (Weeks 9-12)**: Polish and power user features (history, PWA, watermarks)
 
-### Key Principles:
+### Key Principles
+
 - **User-First**: Every change should make the tool easier or more pleasant to use
 - **Performance**: Never sacrifice speed for features
 - **Accessibility**: Build for everyone from the start
