@@ -9,13 +9,38 @@ export default {
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
       },
+      // One-shot entrances and feedback. The looping illustration keyframes
+      // live in src/styles/motion.css next to the SVG classes they drive.
       animation: {
         'fade-in': 'fadeIn 0.25s ease-out',
+        'fade-up': 'fadeUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) backwards',
+        'pop-in': 'popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) backwards',
+        squish: 'squish 0.65s cubic-bezier(0.34, 1.56, 0.64, 1)',
+        shake: 'shake 0.45s ease-in-out',
       },
       keyframes: {
         fadeIn: {
           '0%': { opacity: '0', transform: 'translateY(4px)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        fadeUp: {
+          '0%': { opacity: '0', transform: 'translateY(14px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        popIn: {
+          '0%': { opacity: '0', transform: 'scale(0.5)' },
+          '100%': { opacity: '1', transform: 'scale(1)' },
+        },
+        // The "compressed" beat: flatten, overshoot, settle.
+        squish: {
+          '0%, 100%': { transform: 'scale(1, 1)' },
+          '30%': { transform: 'scale(1.04, 0.86)' },
+          '60%': { transform: 'scale(0.98, 1.03)' },
+        },
+        shake: {
+          '0%, 100%': { transform: 'translateX(0)' },
+          '20%, 60%': { transform: 'translateX(-5px)' },
+          '40%, 80%': { transform: 'translateX(5px)' },
         },
       },
       colors: {

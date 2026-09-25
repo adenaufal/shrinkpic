@@ -34,12 +34,15 @@
   }
 }
 
-/* Respect the OS-level "reduce motion" preference. */
+/* Respect the OS-level "reduce motion" preference. Every looping animation
+   below is written so that its un-animated base style is a sensible still
+   frame — cutting the animation short lands there, not mid-motion. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
@@ -55,16 +58,59 @@
   }
 
   /* Every button in the app is 44px tall — the minimum comfortable touch
-     target — regardless of breakpoint. */
+     target — regardless of breakpoint. Buttons dip slightly when pressed. */
   .btn {
     @apply inline-flex min-h-[2.75rem] items-center justify-center gap-2 rounded-xl px-4 text-sm
-      font-medium transition-colors focus:outline-none focus-visible:ring-2
-      focus-visible:ring-brand-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed
+      font-medium transition-[color,background-color,border-color,box-shadow,transform,opacity]
+      duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500
+      focus-visible:ring-offset-2 enabled:active:scale-[0.97] disabled:cursor-not-allowed
       disabled:opacity-50 dark:focus-visible:ring-offset-dark-bg;
   }
 
   .btn-primary {
     @apply bg-brand-600 text-white hover:bg-brand-700 dark:bg-brand-500 dark:hover:bg-brand-400;
+  }
+
+  /* The one gradient button — the main call to action. A band of light
+     sweeps across it on hover, and loops while `.is-busy`. */
+  .btn-gradient {
+    @apply relative overflow-hidden bg-gradient-to-br from-brand-600 to-violet-600 text-white
+      shadow-sm shadow-brand-600/20 hover:shadow-md hover:shadow-violet-600/25;
+  }
+
+  .btn-gradient::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(100deg, transparent 20%, rgb(255 255 255 / 0.35) 50%, transparent 80%);
+    transform: translateX(-120%);
+    pointer-events: none;
+  }
+
+  .btn-gradient:hover:not(:disabled)::after {
+    transition: transform 0.7s ease;
+    transform: translateX(120%);
+  }
+
+  .btn-gradient.is-busy::after {
+    animation: shine 1.3s ease-in-out infinite;
+  }
+
+  /* Text painted with the brand gradient. */
+  .text-gradient {
+    @apply bg-gradient-to-r from-brand-600 via-indigo-500 to-violet-600 bg-clip-text text-transparent
+      dark:from-brand-400 dark:via-indigo-300 dark:to-violet-400;
+  }
+
+  /* Cards that float up a touch under the pointer. */
+  .lift-hover {
+    @apply transition-[transform,box-shadow,border-color] duration-300 ease-out;
+  }
+
+  @media (hover: hover) {
+    .lift-hover:hover {
+      @apply -translate-y-0.5 border-brand-200 shadow-lg shadow-brand-600/5 dark:border-slate-600;
+    }
   }
 
   .btn-secondary {
@@ -86,11 +132,19 @@
     @apply w-11 shrink-0 px-0;
   }
 
+  /* 16px text below `sm`: iOS Safari zooms the whole page into any form
+     control whose font is smaller, and never zooms back out. */
   .field {
-    @apply min-h-[2.75rem] w-full rounded-xl border border-gray-200 bg-white px-3 text-sm
+    @apply min-h-[2.75rem] w-full rounded-xl border border-gray-200 bg-white px-3 text-base
       text-gray-900 transition-colors focus:outline-none focus-visible:ring-2
       focus-visible:ring-brand-500 disabled:cursor-not-allowed disabled:opacity-50
-      dark:border-dark-border dark:bg-dark-bg dark:text-gray-100;
+      dark:border-dark-border dark:bg-dark-bg dark:text-gray-100 sm:text-sm;
+  }
+
+  .kbd {
+    @apply inline-flex min-w-[1.75rem] items-center justify-center rounded-md border border-gray-200
+      border-b-2 bg-gray-50 px-1.5 py-0.5 font-sans text-xs font-medium text-gray-700
+      dark:border-dark-border dark:bg-dark-bg dark:text-gray-300;
   }
 
   .field-label {

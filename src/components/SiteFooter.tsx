@@ -24,7 +24,7 @@ export const SiteFooter: React.FC = () => {
   return (
     <>
       <footer className="mt-12 border-t border-gray-200 dark:border-dark-border">
-        <div className="mx-auto flex max-w-5xl flex-col items-center gap-3 px-4 py-6 text-sm text-gray-500 dark:text-gray-400 sm:flex-row sm:justify-between">
+        <div className="mx-auto flex max-w-7xl flex-col items-center gap-3 px-4 py-6 text-sm text-gray-500 dark:text-gray-400 sm:flex-row sm:justify-between">
           <p className="text-center sm:text-left">
             &copy; {new Date().getFullYear()} Shrinkpic &middot; MIT licensed &middot; every
             image is processed on your device
@@ -67,11 +67,12 @@ export const SiteFooter: React.FC = () => {
 
           <h3 className={sectionTitleClass}>What is stored on your device</h3>
           <p className={bodyClass}>
-            Two things live in this site's <code>localStorage</code>, and nowhere else:{' '}
+            Three things live in this site's <code>localStorage</code>, and nowhere else:{' '}
             <code>shrinkpic_history</code> (file names, byte sizes and the settings used for each
-            compression run, shown in the History panel) and <code>theme</code> (your light/dark
-            choice). Clear the history from the History panel, or clear this site's data in your
-            browser, and both are gone.
+            compression run, shown in the History panel), <code>theme</code> (your light/dark
+            choice) and <code>shrinkpic_view</code> (grid or list layout for the queue). Clear the
+            history from the History panel, or clear this site's data in your browser, and all
+            three are gone.
           </p>
 
           <h3 className={sectionTitleClass}>No tracking, no third parties</h3>

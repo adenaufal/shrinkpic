@@ -1,17 +1,35 @@
-import React, { useCallback, useRef, useState } from 'react';
-import { Upload } from 'lucide-react';
+import React, { useCallback, useRef } from 'react';
 import { ACCEPT_ATTRIBUTE, MAX_FILES, MAX_FILE_BYTES } from '../utils/fileValidation';
 import { formatFileSize } from '../utils/format';
+import { modifierKeyLabel } from '../utils/platform';
+import { DropArt, MarchingBorder } from './art/DropArt';
+
+const FORMAT_LABELS = ['JPG', 'PNG', 'WebP', 'AVIF', 'GIF', 'BMP'];
 
 interface FileUploadProps {
   onFileSelect: (files: File[]) => void;
   isProcessing: boolean;
-  hasImages: boolean;
 }
 
-export const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, isProcessing, hasImages }) => {
-  const [isDragActive, setIsDragActive] = useState(false);
-  const dragDepth = useRef(0);
+/**
+ * The landing page's drop zone. It is a big click target for the file
+ * picker; drops are handled by the full-window <DropOverlay>, which takes
+ * over as soon as files are dragged anywhere onto the page (this zone
+ * included), so there is exactly one drop path to get right.
+ */
+export const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, isProcessing }) => {
+  const zoneRef = useRef<HTMLDivElement>(null);
+
+  // The spotlight follows the pointer through CSS variables written straight
+  // to the element — a state update per pointermove would re-render for
+  // nothing but a background position.
+  const trackPointer = useCallback((event: React.PointerEvent) => {
+    const zone = zoneRef.current;
+    if (!zone) return;
+    const rect = zone.getBoundingClientRect();
+    zone.style.setProperty('--mx', `${event.clientX - rect.left}px`);
+    zone.style.setProperty('--my', `${event.clientY - rect.top}px`);
+  }, []);
 
   const handleFileInput = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -26,117 +44,54 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, isProcessi
     [onFileSelect]
   );
 
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-  }, []);
-
-  const handleDragEnter = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    dragDepth.current += 1;
-    setIsDragActive(true);
-  }, []);
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    dragDepth.current = Math.max(0, dragDepth.current - 1);
-    if (dragDepth.current === 0) {
-      setIsDragActive(false);
-    }
-  }, []);
-
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      dragDepth.current = 0;
-      setIsDragActive(false);
-
-      if (isProcessing) return;
-
-      // Validation lives in the parent so the picker and the drop target
-      // behave identically and nothing is ever discarded silently.
-      const files = Array.from(e.dataTransfer.files);
-      if (files.length > 0) {
-        onFileSelect(files);
-      }
-    },
-    [onFileSelect, isProcessing]
-  );
-
-  const dragHandlers = {
-    onDragOver: handleDragOver,
-    onDragEnter: handleDragEnter,
-    onDragLeave: handleDragLeave,
-    onDrop: handleDrop,
-  };
-
-  const borderClass = isDragActive
-    ? 'border-brand-500 bg-brand-50 dark:border-brand-400 dark:bg-brand-500/10'
-    : 'border-gray-300 hover:border-brand-400 dark:border-dark-border dark:hover:border-brand-500';
-
-  // Compact strip once the queue has images: the drop target must stay
-  // available, otherwise dropping more files does nothing (or navigates away).
-  if (hasImages) {
-    return (
-      <div
-        className={`relative flex min-h-[2.75rem] items-center justify-center gap-2 rounded-xl border border-dashed px-4 py-3 text-sm transition-colors focus-within:ring-2 focus-within:ring-brand-500 ${borderClass} ${
-          isProcessing ? 'opacity-60' : ''
-        }`}
-        {...dragHandlers}
-      >
-        <input
-          type="file"
-          multiple
-          accept={ACCEPT_ATTRIBUTE}
-          onChange={handleFileInput}
-          className="absolute inset-0 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
-          disabled={isProcessing}
-          aria-label="Add more images"
-        />
-        <Upload className="h-4 w-4 shrink-0 text-gray-400 dark:text-gray-500" aria-hidden="true" />
-        <span className="text-gray-600 dark:text-gray-400">
-          {isDragActive ? 'Drop to add these images' : 'Add more images'}
-        </span>
-      </div>
-    );
-  }
-
   return (
     <div
-      className={`relative flex min-h-[15rem] flex-col items-center justify-center rounded-2xl border border-dashed px-6 py-10 text-center transition-colors focus-within:ring-2 focus-within:ring-brand-500 sm:min-h-[17rem] ${borderClass}`}
-      {...dragHandlers}
+      ref={zoneRef}
+      onPointerMove={trackPointer}
+      className="drop-zone relative flex min-h-[15rem] flex-col items-center justify-center overflow-hidden rounded-2xl bg-white/70 px-6 py-8 text-center transition-colors focus-within:ring-2 focus-within:ring-brand-500 dark:bg-dark-card/60 sm:min-h-[16rem]"
     >
+      <MarchingBorder radius={16} active={false} />
+      <div className="drop-spotlight pointer-events-none absolute inset-0" aria-hidden="true" />
+
       <input
         type="file"
         multiple
         accept={ACCEPT_ATTRIBUTE}
         onChange={handleFileInput}
-        className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+        className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
         disabled={isProcessing}
-        aria-label="Upload images"
+        aria-label="Choose images to compress"
       />
 
-      <span
-        className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
-        aria-hidden="true"
-      >
-        <Upload className="h-5 w-5" />
-      </span>
+      <DropArt className="relative h-24 w-32" />
 
-      <h2 className="mt-4 text-lg font-semibold text-gray-900 dark:text-gray-100">
-        {isDragActive ? 'Drop to add these images' : 'Drop images here'}
-      </h2>
-      <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">or click to browse</p>
+      <p className="relative mt-3 text-lg font-semibold text-gray-900 dark:text-gray-100">
+        Drop images here
+      </p>
+      <p className="relative mt-1 text-sm text-gray-500 dark:text-gray-400">
+        or <span className="font-medium text-brand-600 dark:text-brand-400">click to browse</span>
+        {/* Paste needs a keyboard; touch screens get the shorter line. */}
+        <span className="hidden md:inline">
+          {' '}
+          · paste with <kbd className="kbd">{modifierKeyLabel()}</kbd> <kbd className="kbd">V</kbd>
+        </span>
+      </p>
 
       {/* A first-time visitor should be able to answer "what can I give it?"
-          without leaving the page. The privacy promise is stated once, in the
-          hero directly above this. */}
-      <p className="mt-6 max-w-sm text-xs leading-relaxed text-gray-500 dark:text-gray-400">
-        JPG, PNG, WebP, AVIF, GIF and BMP &middot; up to {MAX_FILES} images,{' '}
-        {formatFileSize(MAX_FILE_BYTES)} each
+          without leaving the page. */}
+      <ul className="relative mt-5 flex flex-wrap justify-center gap-1.5" aria-label="Supported formats">
+        {FORMAT_LABELS.map((label, index) => (
+          <li
+            key={label}
+            className="animate-fade-up rounded-full border border-gray-200 bg-white px-2 py-0.5 text-[11px] font-medium text-gray-600 dark:border-dark-border dark:bg-dark-bg dark:text-gray-400"
+            style={{ animationDelay: `${300 + index * 50}ms` }}
+          >
+            {label}
+          </li>
+        ))}
+      </ul>
+      <p className="relative mt-2 text-xs text-gray-500 dark:text-gray-400">
+        Up to {MAX_FILES} images, {formatFileSize(MAX_FILE_BYTES)} each
       </p>
     </div>
   );
