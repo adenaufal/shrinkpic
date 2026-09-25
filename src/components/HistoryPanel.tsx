@@ -3,7 +3,8 @@ import { Trash2, Clock, X } from 'lucide-react';
 import { Dialog, DialogClose, DialogPanel } from './ui/dialog';
 import { HistorySession } from '../hooks/useCompressionHistory';
 import { formatFileSize } from '../utils/format';
-import { formatLabelFromMime } from '../utils/imageCompression';
+import { formatLabelFromMime, MIME_BY_FORMAT } from '../utils/imageCompression';
+import { countKeptOriginalFormat } from '../utils/historyStats';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 
 interface HistoryPanelProps {
@@ -96,11 +97,13 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
                 // original format instead, so the actual bytes on disk can
                 // differ from that setting. Surface it rather than implying
                 // every file matches.
-                const requestedFormatLabel = session.settings.format.toUpperCase();
-                const keptOriginalFormatCount = session.images.filter(
-                  (img) =>
-                    img.outputType && formatLabelFromMime(img.outputType) !== requestedFormatLabel
-                ).length;
+                const requestedFormatLabel = formatLabelFromMime(
+                  MIME_BY_FORMAT[session.settings.format]
+                );
+                const keptOriginalFormatCount = countKeptOriginalFormat(
+                  session.images,
+                  session.settings.format
+                );
 
                 return (
                   <div
