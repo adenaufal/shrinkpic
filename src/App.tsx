@@ -1,13 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
+import { Lock } from 'lucide-react';
 import { Header } from './components/Header';
-import { Hero } from './components/Hero';
+import { Landing } from './components/Landing';
 import { SiteFooter } from './components/SiteFooter';
-import { FileUpload } from './components/FileUpload';
 import { CompressionControls } from './components/CompressionControls';
 import { ActionBar } from './components/ActionBar';
+import { BatchPanel, type BatchProgress } from './components/BatchPanel';
 import { ImagePreview } from './components/ImagePreview';
 import { HistoryPanel } from './components/HistoryPanel';
+import { DropOverlay } from './components/DropOverlay';
+import { ShortcutsDialog } from './components/ShortcutsDialog';
+import { Backdrop } from './components/art/Backdrop';
+import { StickyAside } from './components/ui/StickyAside';
 import {
   copyImageToClipboard,
   downloadFile,
@@ -24,7 +29,31 @@ import { getCompressionConcurrency, runWithConcurrency } from './utils/concurren
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { useCompressionHistory } from './hooks/useCompressionHistory';
 import { useCompressionWorker } from './hooks/useCompressionWorker';
+import { useGlobalFileDrop } from './hooks/useGlobalFileDrop';
+import { usePasteImages } from './hooks/usePasteImages';
 import type { QueuedImage } from './types';
+
+interface RunSettings {
+  quality: number;
+  maxWidth: number;
+  format: OutputFormat;
+}
+
+/** Whether results made with `previous` still match the current settings. */
+const sameSettings = (previous: RunSettings, current: RunSettings): boolean =>
+  previous.format === current.format &&
+  previous.maxWidth === current.maxWidth &&
+  // PNG is lossless: the quality slider has no effect on it.
+  (current.format === 'png' || previous.quality === current.quality);
+
+/** How long "Clear" can be undone. */
+const UNDO_MS = 6000;
+
+interface ClearedBatch {
+  images: QueuedImage[];
+  toastId: string;
+  timer: number;
+}
 
 function App() {
   const defaultPreset = getDefaultPreset();
@@ -35,6 +64,12 @@ function App() {
   const [selectedPreset, setSelectedPreset] = useState(defaultPreset.id);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  // The settings the current results were made with — compared against the
+  // live settings to tell the user their results are out of date.
+  const [lastRun, setLastRun] = useState<RunSettings | null>(null);
+  // Progress of the run in flight, for the batch panel and the tab title.
+  const [batch, setBatch] = useState<BatchProgress | null>(null);
   // The queue's modals (editor, comparison) live inside ImagePreview; it
   // reports them up so the global shortcuts can stand down while one is open.
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
@@ -46,6 +81,7 @@ function App() {
   const { history, addSession, deleteSession, clearHistory } = useCompressionHistory();
   const { compress } = useCompressionWorker();
   const concurrency = useMemo(() => getCompressionConcurrency(), []);
+  const { dragging, endDrag } = useGlobalFileDrop();
 
   // Mirror of `images` for cleanup paths that must not re-run on every change.
   const imagesRef = useRef<QueuedImage[]>(images);
@@ -53,14 +89,46 @@ function App() {
     imagesRef.current = images;
   });
 
+  // A cleared queue is parked here, result URLs and all, until its undo
+  // window closes.
+  const clearedRef = useRef<ClearedBatch | null>(null);
+
   // Compressed blobs are held alive by their object URLs; release everything
   // outstanding when the app goes away.
   useEffect(
     () => () => {
       imagesRef.current.forEach((image) => revokeResultUrl(image.result));
+      clearedRef.current?.images.forEach((image) => revokeResultUrl(image.result));
     },
     []
   );
+
+  // Progress in the tab title, for the batch running in a background tab.
+  const baseTitle = useRef(document.title);
+  useEffect(() => {
+    document.title = batch
+      ? `(${batch.finished}/${batch.total}) Compressing… · Shrinkpic`
+      : baseTitle.current;
+  }, [batch]);
+
+  /** Makes a pending "Clear" permanent: its result URLs are released. */
+  const commitClear = useCallback(() => {
+    const cleared = clearedRef.current;
+    if (!cleared) return;
+    window.clearTimeout(cleared.timer);
+    toast.dismiss(cleared.toastId);
+    cleared.images.forEach((image) => revokeResultUrl(image.result));
+    clearedRef.current = null;
+  }, []);
+
+  const undoClear = useCallback(() => {
+    const cleared = clearedRef.current;
+    if (!cleared) return;
+    window.clearTimeout(cleared.timer);
+    toast.dismiss(cleared.toastId);
+    clearedRef.current = null;
+    setImages(cleared.images);
+  }, []);
 
   const handlePresetChange = useCallback((presetId: string) => {
     setSelectedPreset(presetId);
@@ -72,22 +140,43 @@ function App() {
     }
   }, []);
 
-  const handleFileSelect = useCallback((files: File[]) => {
-    const { accepted, errors } = validateFiles(files, imagesRef.current.length);
+  const handleFileSelect = useCallback(
+    (files: File[]) => {
+      // New work closes the undo window on a cleared queue — restoring it
+      // on top of fresh images would blow past the queue limit.
+      commitClear();
 
-    errors.forEach((message) => toast.error(message, { duration: 5000 }));
+      const { accepted, errors } = validateFiles(files, imagesRef.current.length);
 
-    if (accepted.length === 0) return;
+      errors.forEach((message) => toast.error(message, { duration: 5000 }));
 
-    const queued = accepted.map<QueuedImage>((file) => ({
-      id: createId(),
-      file,
-      status: 'idle',
-    }));
+      if (accepted.length === 0) return;
 
-    setImages((prev) => [...prev, ...queued]);
-    toast.success(`${accepted.length} image${accepted.length > 1 ? 's' : ''} added`);
-  }, []);
+      const queued = accepted.map<QueuedImage>((file) => ({
+        id: createId(),
+        file,
+        status: 'idle',
+      }));
+
+      setImages((prev) => [...prev, ...queued]);
+      toast.success(`${accepted.length} image${accepted.length > 1 ? 's' : ''} added`);
+    },
+    [commitClear]
+  );
+
+  // Paste and drop can arrive mid-batch, when the pickers are disabled.
+  const isProcessingRef = useRef(isProcessing);
+  useEffect(() => {
+    isProcessingRef.current = isProcessing;
+  });
+
+  usePasteImages((files) => {
+    if (isProcessingRef.current) {
+      toast('Wait for the current batch to finish, then paste again.', { icon: '⏳' });
+      return;
+    }
+    handleFileSelect(files);
+  });
 
   const handleRemoveImage = useCallback((id: string) => {
     const target = imagesRef.current.find((image) => image.id === id);
@@ -108,14 +197,36 @@ function App() {
     toast.success('Image edited successfully');
   }, []);
 
+  // Delete clears everything in one keystroke, so it is undoable rather than
+  // confirmed: the results stay alive for a few seconds behind an Undo toast.
   const handleClearAll = useCallback(() => {
-    const count = imagesRef.current.length;
-    imagesRef.current.forEach((image) => revokeResultUrl(image.result));
+    const cleared = imagesRef.current;
+    if (cleared.length === 0) return;
+    commitClear();
     setImages([]);
-    if (count > 0) {
-      toast.success(`Cleared ${count} image${count > 1 ? 's' : ''}`);
-    }
-  }, []);
+
+    const count = cleared.length;
+    const toastId = toast(
+      () => (
+        <span className="flex items-center gap-3">
+          Cleared {count} image{count > 1 ? 's' : ''}
+          <button
+            type="button"
+            onClick={undoClear}
+            className="rounded-md px-2 py-1 font-semibold text-brand-300 transition-colors hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400"
+          >
+            Undo
+          </button>
+        </span>
+      ),
+      { duration: UNDO_MS }
+    );
+    clearedRef.current = {
+      images: cleared,
+      toastId,
+      timer: window.setTimeout(commitClear, UNDO_MS),
+    };
+  }, [commitClear, undoClear]);
 
   const runCompression = useCallback(
     async (targets: QueuedImage[]) => {
@@ -129,7 +240,15 @@ function App() {
         });
       }
 
+      // A run over the whole queue defines what "current results" means. A
+      // partial run (new images, one retry) leaves that alone, so a retry
+      // made under different settings still reads as out of date.
+      if (targets.length === imagesRef.current.length) {
+        setLastRun({ quality, maxWidth, format: outputFormat });
+      }
+
       setIsProcessing(true);
+      setBatch({ total: targets.length, finished: 0 });
       setAnnouncement(`Compressing ${targets.length} image${targets.length > 1 ? 's' : ''}…`);
 
       // Drop the previous results (and their object URLs) before re-running.
@@ -143,9 +262,8 @@ function App() {
         )
       );
 
-      const loadingToast = toast.loading(
-        `Compressing ${targets.length} image${targets.length > 1 ? 's' : ''}...`
-      );
+      const countFinished = () =>
+        setBatch((current) => (current ? { ...current, finished: current.finished + 1 } : current));
 
       try {
         // A bounded pool: every in-flight image holds a decoded bitmap, so
@@ -198,6 +316,8 @@ function App() {
             );
 
             return { target, result: null, error: message };
+          } finally {
+            countFinished();
           }
         });
 
@@ -229,30 +349,42 @@ function App() {
         } else if (succeeded.length > 0) {
           const message = `Finished: ${succeeded.length} compressed, ${failed} failed`;
           toast.error(
-            `Compressed ${succeeded.length}, ${failed} failed — see the highlighted cards to retry.`,
+            `Compressed ${succeeded.length}, ${failed} failed — see the highlighted images to retry.`,
             { duration: 6000 }
           );
           setAnnouncement(message);
         } else {
-          const message = 'Compression failed — see the highlighted cards for details.';
+          const message = 'Compression failed — see the highlighted images for details.';
           toast.error(message, { duration: 6000 });
           setAnnouncement(message);
         }
       } finally {
-        // In the finally block, not the happy path: `toast.loading` has no
-        // duration, so a throw anywhere above would otherwise leave
-        // "Compressing N images..." spinning on screen for good.
-        toast.dismiss(loadingToast);
+        // In the finally block, not the happy path: a throw anywhere above
+        // would otherwise leave the whole UI locked in its busy state.
+        setBatch(null);
         setIsProcessing(false);
       }
     },
     [addSession, compress, concurrency, format, maxWidth, quality]
   );
 
+  const hasResults = images.some((image) => image.result);
+  const hasImages = images.length > 0;
+  const pendingCount = images.filter((image) => !image.result).length;
+  const settingsChanged =
+    hasResults &&
+    lastRun !== null &&
+    !sameSettings(lastRun, { quality, maxWidth, format: resolveOutputFormat(format) });
+
+  // Compress only what needs it: new or failed images when the settings are
+  // unchanged, the whole queue when they changed (or when everything is
+  // already done and the user asks again).
   const handleCompress = useCallback(() => {
     if (isProcessing) return;
-    void runCompression(imagesRef.current);
-  }, [isProcessing, runCompression]);
+    const all = imagesRef.current;
+    const pending = all.filter((image) => !image.result);
+    void runCompression(settingsChanged || pending.length === 0 ? all : pending);
+  }, [isProcessing, runCompression, settingsChanged]);
 
   const handleRetry = useCallback(
     (id: string) => {
@@ -343,13 +475,10 @@ function App() {
     }
   }, []);
 
-  const hasResults = images.some((image) => image.result);
-  const hasImages = images.length > 0;
-
   // Global shortcuts stand down while any modal is up: Delete would otherwise
   // clear the queue from inside the image editor (taking the unsaved edit with
   // it) and Ctrl+Enter would start a batch behind the open dialog.
-  const anyModalOpen = showHistory || previewModalOpen;
+  const anyModalOpen = showHistory || showShortcuts || previewModalOpen;
 
   useKeyboardShortcuts(
     [
@@ -410,18 +539,29 @@ function App() {
         action: () => setShowHistory(true),
         description: 'View history',
       },
+      {
+        key: '?',
+        shift: true,
+        action: () => setShowShortcuts(true),
+        description: 'Show keyboard shortcuts',
+      },
     ],
     !anyModalOpen
   );
 
   return (
-    // The bottom padding reserves room for the fixed action bar on small
-    // screens; from `md` up the bar sits in the page flow and needs none.
+    // `isolate` gives the backdrop's negative z-index a floor: it paints above
+    // this element's background instead of disappearing behind the page. The
+    // column layout with a growing <main> keeps the footer at the bottom of
+    // the window when the content is short. The bottom padding reserves room
+    // for the fixed action bar below `lg`.
     <div
-      className={`min-h-screen bg-gray-50 font-sans text-gray-900 dark:bg-dark-bg dark:text-gray-100 ${
-        hasImages ? 'pb-24 md:pb-0' : ''
+      className={`relative isolate flex min-h-screen flex-col bg-gray-50 font-sans text-gray-900 dark:bg-dark-bg dark:text-gray-100 ${
+        hasImages ? 'pb-[calc(6rem+env(safe-area-inset-bottom))] lg:pb-0' : ''
       }`}
     >
+      <Backdrop />
+
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-lg focus:bg-brand-600 focus:px-4 focus:py-2 focus:text-white"
@@ -435,24 +575,37 @@ function App() {
         {announcement}
       </div>
 
-      <Header historyCount={history.length} onOpenHistory={() => setShowHistory(true)} />
+      <Header
+        historyCount={history.length}
+        onOpenHistory={() => setShowHistory(true)}
+        onOpenShortcuts={() => setShowShortcuts(true)}
+        busy={isProcessing}
+      />
 
-      {/* One column at every breakpoint, read top to bottom: pitch, drop zone,
-          settings, one primary action, results. */}
-      <main id="main-content" className="mx-auto w-full max-w-5xl px-4 pb-8">
-        {/* The pitch collapses to one line once there is work in the queue, so
-            the uploader is never pushed below the fold. */}
-        <Hero compact={hasImages} />
+      <main id="main-content" className="mx-auto w-full max-w-7xl flex-1 px-4 pb-10 sm:px-6 lg:px-8">
+        {hasImages ? (
+          // The workspace. Below `lg`: batch card, folded settings, queue —
+          // with the actions pinned to the bottom of the screen. From `lg`:
+          // a sidebar (batch, actions, settings) that stays in view while
+          // the queue scrolls beside it.
+          <div className="grid gap-4 pt-4 sm:pt-6 lg:grid-cols-[20rem_minmax(0,1fr)] lg:items-start lg:gap-8 lg:pt-8 xl:grid-cols-[22rem_minmax(0,1fr)]">
+            <h1 className="sr-only">Compress images in your browser</h1>
 
-        <div className="space-y-4">
-          <FileUpload
-            onFileSelect={handleFileSelect}
-            isProcessing={isProcessing}
-            hasImages={hasImages}
-          />
+            <StickyAside className="flex flex-col gap-4" aria-label="Batch and settings">
+              <BatchPanel images={images} isProcessing={isProcessing} batch={batch}>
+                <ActionBar
+                  onCompress={handleCompress}
+                  onDownloadAll={handleDownloadAll}
+                  onDownloadAsZip={handleDownloadAsZip}
+                  onClearAll={handleClearAll}
+                  isProcessing={isProcessing}
+                  imageCount={images.length}
+                  hasResults={hasResults}
+                  pendingCount={pendingCount}
+                  settingsChanged={settingsChanged}
+                />
+              </BatchPanel>
 
-          {hasImages && (
-            <>
               <CompressionControls
                 quality={quality}
                 onQualityChange={setQuality}
@@ -464,30 +617,35 @@ function App() {
                 onPresetChange={handlePresetChange}
               />
 
-              <ActionBar
-                onCompress={handleCompress}
-                onDownloadAll={handleDownloadAll}
-                onDownloadAsZip={handleDownloadAsZip}
-                onClearAll={handleClearAll}
-                isProcessing={isProcessing}
-                imageCount={images.length}
-                hasResults={hasResults}
-              />
+              <p className="hidden items-center gap-2 px-1 text-xs text-gray-500 dark:text-gray-400 lg:flex">
+                <Lock className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                Every file is processed on this device. Nothing is uploaded.
+              </p>
+            </StickyAside>
 
-              <ImagePreview
-                images={images}
-                onRemove={handleRemoveImage}
-                onEdit={handleEditImage}
-                onRetry={handleRetry}
-                isProcessing={isProcessing}
-                onModalOpenChange={setPreviewModalOpen}
-              />
-            </>
-          )}
-        </div>
+            <ImagePreview
+              images={images}
+              onRemove={handleRemoveImage}
+              onEdit={handleEditImage}
+              onRetry={handleRetry}
+              onAddFiles={handleFileSelect}
+              isProcessing={isProcessing}
+              onModalOpenChange={setPreviewModalOpen}
+            />
+          </div>
+        ) : (
+          <Landing onFileSelect={handleFileSelect} isProcessing={isProcessing} />
+        )}
       </main>
 
       <SiteFooter />
+
+      <DropOverlay
+        open={dragging}
+        busy={isProcessing}
+        onDropFiles={handleFileSelect}
+        onClose={endDrag}
+      />
 
       <HistoryPanel
         open={showHistory}
@@ -499,6 +657,8 @@ function App() {
           toast.success('History cleared');
         }}
       />
+
+      <ShortcutsDialog open={showShortcuts} onOpenChange={setShowShortcuts} />
     </div>
   );
 }

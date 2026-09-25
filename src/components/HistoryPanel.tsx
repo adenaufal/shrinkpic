@@ -5,6 +5,7 @@ import { HistorySession } from '../hooks/useCompressionHistory';
 import { formatFileSize } from '../utils/format';
 import { formatLabelFromMime } from '../utils/imageCompression';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
+import { EmptyHistoryArt } from './art/EmptyHistoryArt';
 
 interface HistoryPanelProps {
   open: boolean;
@@ -65,7 +66,8 @@ export const HistoryPanel: React.FC<HistoryPanelProps> = ({
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4 md:p-6">
           {history.length === 0 ? (
-            <div className="py-12 text-center">
+            <div className="py-10 text-center">
+              <EmptyHistoryArt className="mx-auto mb-4 h-20 w-28" />
               <p className="text-sm font-medium text-gray-900 dark:text-gray-100">No history yet</p>
               <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                 Runs you compress will be listed here
