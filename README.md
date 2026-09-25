@@ -30,11 +30,14 @@ install the app and go offline — it behaves identically.
 
 - **100% on-device compression** — files never leave the tab, and there is no
   backend to leave it to.
-- **Batch processing** — queue up to 50 images at a time; work runs through a
-  bounded pool so the tab stays responsive instead of decoding everything at
-  once.
-- **Presets and manual control** — pick a preset, or set quality, output format
-  and maximum dimension yourself.
+- **Batch processing** — queue up to 50 images, 50 MB each; work runs through a
+  bounded pool of Web Workers so the tab stays responsive instead of decoding
+  everything at once.
+- **Several ways in** — drop files anywhere on the page, paste from the
+  clipboard, browse, or try a sample image drawn in the tab so you can see a
+  result without using a photo of your own.
+- **Preset tiles and manual control** — Web, Social, Email and Print, or set
+  quality, output format and maximum dimension yourself.
 - **Formats in:** JPG, PNG, WebP, AVIF, GIF, BMP. **Out:** JPEG, PNG, WebP —
   with a capability check, so the app never hands you a `.webp` that is secretly
   a PNG.
@@ -42,24 +45,35 @@ install the app and go offline — it behaves identically.
   brightness/contrast/saturation filters).
 - **Export how you like** — download individually, grab everything as a ZIP, or
   copy a result straight to the clipboard.
+- **A workspace that fits the screen** — on a desktop the batch summary,
+  actions and settings stay in a sidebar while it fits the viewport; on a phone
+  they fold, with a fixed action bar. The queue switches between grid and list,
+  and that choice is remembered.
 - **Compression history** — past runs are recorded in `localStorage` on this
-  device only, and can be cleared at any time.
+  device only, and can be cleared at any time. A later run compresses only
+  images that are new or failed, and clearing the queue can be undone.
+- **Keyboard shortcuts** — compress, download, ZIP, copy, history and clear.
+  Press `?` in the app for the full list.
 - **Installable PWA** — offline-capable service worker, standalone window, real
   app icon.
 - **Light and dark themes**, applied before first paint so there is no white
-  flash.
+  flash. Motion respects `prefers-reduced-motion`.
 
 ## Screenshot
 
-![The Shrinkpic workspace after a run: two photos compressed from 4.89 MB to 303.17 KB (94% smaller), showing the drop zone, the compression settings and the results grid](images/screenshot.png)
+![The Shrinkpic landing page: the drop zone sits under the headline, a browser illustration shows a photo being pressed smaller, and three tiles promise that nothing is uploaded, the app works offline, and batches run in parallel](images/screenshot.png)
+
+![The workspace after compressing the built-in sample: 2.6 MB down to 183.92 KB (93% smaller), with the savings summary, preset tiles and the result card](images/screenshot-workspace.png)
 
 ## Privacy
 
 - No server, no accounts, no analytics, no advertising, no cookies.
 - No third-party requests at all — fonts and every other asset are self-hosted.
-- Two keys are written to this site's `localStorage` and nowhere else:
-  `shrinkpic_history` (file names, byte sizes and settings per run) and
-  `theme`. Clearing the history in-app or clearing site data removes both.
+- Three keys are written to this site's `localStorage` and nowhere else:
+  `shrinkpic_history` (file names, byte sizes and settings per run), `theme`
+  and `shrinkpic_view` (whether the queue is shown as a grid or a list).
+  Clearing the history in-app removes the runs; clearing site data removes all
+  three.
 - A service worker caches the app's own files so it can run offline.
 
 The in-app **Privacy** and **About** panels (in the footer) say the same thing
